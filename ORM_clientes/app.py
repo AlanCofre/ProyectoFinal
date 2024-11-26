@@ -1,17 +1,16 @@
 import customtkinter as ctk
 from tkinter import messagebox, ttk
-from database import get_session
-from crud.cliente_crud import ClienteCRUD
-from crud.pedido_crud import PedidoCRUD
-from database import get_session, engine, Base
+
+# Datos locales en memoria
+clientes = []
+pedidos = []
+
 # Configuración de la ventana principal
 ctk.set_appearance_mode("System")  # Opciones: "System", "Dark", "Light"
 ctk.set_default_color_theme("dark-blue")  # Opciones: "blue", "green", "dark-blue"
-# Crear las tablas en la base de datos
-# Crear las tablas en la base de datos
-Base.metadata.create_all(bind=engine)
+
 class App(ctk.CTk):
-    def __init__(self):
+    def __init__(self): 
         super().__init__()
 
         self.title("Gestión de Clientes y Pedidos")
@@ -121,33 +120,26 @@ class App(ctk.CTk):
     # Método para actualizar los correos electrónicos en el Combobox
     def actualizar_emails_combobox(self):
         """Llena el Combobox con los emails de los clientes."""
-        db = next(get_session())
-        emails = [cliente.email for cliente in ClienteCRUD.leer_clientes(db)]
+        emails = [cliente["email"] for cliente in clientes]
         self.combobox_cliente_email['values'] = emails
-        db.close()
 
     # Métodos CRUD para Clientes
     def cargar_clientes(self):
-        db = next(get_session())
         self.treeview_clientes.delete(*self.treeview_clientes.get_children())
-        clientes = ClienteCRUD.leer_clientes(db)
         for cliente in clientes:
-            self.treeview_clientes.insert("", "end", values=(cliente.email, cliente.nombre))
-        db.close()
+            self.treeview_clientes.insert("", "end", values=(cliente["email"], cliente["nombre"]))
 
     def crear_cliente(self):
         nombre = self.entry_nombre.get()
         email = self.entry_email.get()
         if nombre and email:
-            db = next(get_session())
-            cliente = ClienteCRUD.crear_cliente(db, nombre, email)
-            if cliente:
+            if any(cliente["email"] == email for cliente in clientes):
+                messagebox.showwarning("Error", "El cliente ya existe.")
+            else:
+                clientes.append({"nombre": nombre, "email": email})
                 messagebox.showinfo("Éxito", "Cliente creado correctamente.")
                 self.cargar_clientes()
                 self.actualizar_emails_combobox()  # Actualizar el Combobox con el nuevo email
-            else:
-                messagebox.showwarning("Error", "El cliente ya existe.")
-            db.close()
         else:
             messagebox.showwarning("Campos Vacíos", "Por favor, ingrese todos los campos.")
 
@@ -165,53 +157,36 @@ class App(ctk.CTk):
             messagebox.showwarning("Campo Vacío", "Por favor, ingrese un email.")
             return
         email_viejo = self.treeview_clientes.item(selected_item)["values"][0]
-        nombre = self.entry_nombre.get()
-        if nombre:
-            db = next(get_session())
-            cliente_actualizado = ClienteCRUD.actualizar_cliente(db, email_viejo, nombre,email)
-            if cliente_actualizado:
+        for cliente in clientes:
+            if cliente["email"] == email_viejo:
+                cliente["nombre"] = nombre
+                cliente["email"] = email
                 messagebox.showinfo("Éxito", "Cliente actualizado correctamente.")
                 self.cargar_clientes()
-            else:
-                messagebox.showwarning("Error", "No se pudo actualizar el cliente.")
-            db.close()
-        else:
-            messagebox.showwarning("Campos Vacíos", "Por favor, ingrese el nombre.")
+                break
 
     def eliminar_cliente(self):
         selected_item = self.treeview_clientes.selection()
-        if not selected_item:
-            messagebox.showwarning("Selección", "Por favor, seleccione un cliente.")
-            return
-        email = self.treeview_clientes.item(selected_item)["values"][0]
-        db = next(get_session())
-        ClienteCRUD.borrar_cliente(db, email)
-        messagebox.showinfo("Éxito", "Cliente eliminado correctamente.")
-        self.cargar_clientes()
-        self.actualizar_emails_combobox()  # Actualizar el Combobox después de eliminar
-        db.close()
+        if selected_item:
+            email = self.treeview_clientes.item(selected_item)["values"][0]
+            clientes[:] = [cliente for cliente in clientes if cliente["email"] != email]
+            messagebox.showinfo("Éxito", "Cliente eliminado correctamente.")
+            self.cargar_clientes()
 
     # Métodos CRUD para Pedidos
     def cargar_pedidos(self):
-        db = next(get_session())
         self.treeview_pedidos.delete(*self.treeview_pedidos.get_children())
-        pedidos = PedidoCRUD.leer_pedidos(db)
         for pedido in pedidos:
-            self.treeview_pedidos.insert("", "end", values=(pedido.id, pedido.cliente_email, pedido.descripcion))
-        db.close()
+            self.treeview_pedidos.insert("", "end", values=(pedido["id"], pedido["cliente_email"], pedido["descripcion"]))
 
     def crear_pedido(self):
         cliente_email = self.combobox_cliente_email.get()
         descripcion = self.entry_descripcion.get()
         if cliente_email and descripcion:
-            db = next(get_session())
-            pedido = PedidoCRUD.crear_pedido(db, cliente_email, descripcion)
-            if pedido:
-                messagebox.showinfo("Éxito", "Pedido creado correctamente.")
-                self.cargar_pedidos()
-            else:
-                messagebox.showwarning("Error", "No se pudo crear el pedido.")
-            db.close()
+            id_pedido = len(pedidos) + 1
+            pedidos.append({"id": id_pedido, "cliente_email": cliente_email, "descripcion": descripcion})
+            messagebox.showinfo("Éxito", "Pedido creado correctamente.")
+            self.cargar_pedidos()
         else:
             messagebox.showwarning("Campos Vacíos", "Por favor, ingrese todos los campos.")
 
@@ -220,32 +195,29 @@ class App(ctk.CTk):
         if not selected_item:
             messagebox.showwarning("Selección", "Por favor, seleccione un pedido.")
             return
-        pedido_id = self.treeview_pedidos.item(selected_item)["values"][0]
+        cliente_email = self.combobox_cliente_email.get()
         descripcion = self.entry_descripcion.get()
-        if descripcion:
-            db = next(get_session())
-            pedido_actualizado = PedidoCRUD.actualizar_pedido(db, pedido_id, descripcion)
-            if pedido_actualizado:
-                messagebox.showinfo("Éxito", "Pedido actualizado correctamente.")
-                self.cargar_pedidos()
-            else:
-                messagebox.showwarning("Error", "No se pudo actualizar el pedido.")
-            db.close()
+        if cliente_email and descripcion:
+            id_pedido = self.treeview_pedidos.item(selected_item)["values"][0]
+            for pedido in pedidos:
+                if pedido["id"] == id_pedido:
+                    pedido["cliente_email"] = cliente_email
+                    pedido["descripcion"] = descripcion
+                    messagebox.showinfo("Éxito", "Pedido actualizado correctamente.")
+                    self.cargar_pedidos()
+                    break
         else:
-            messagebox.showwarning("Campos Vacíos", "Por favor, ingrese la descripción.")
+            messagebox.showwarning("Campos Vacíos", "Por favor, ingrese todos los campos.")
 
     def eliminar_pedido(self):
         selected_item = self.treeview_pedidos.selection()
-        if not selected_item:
-            messagebox.showwarning("Selección", "Por favor, seleccione un pedido.")
-            return
-        pedido_id = self.treeview_pedidos.item(selected_item)["values"][0]
-        db = next(get_session())
-        PedidoCRUD.borrar_pedido(db, pedido_id)
-        messagebox.showinfo("Éxito", "Pedido eliminado correctamente.")
-        self.cargar_pedidos()
-        db.close()
+        if selected_item:
+            id_pedido = self.treeview_pedidos.item(selected_item)["values"][0]
+            pedidos[:] = [pedido for pedido in pedidos if pedido["id"] != id_pedido]
+            messagebox.showinfo("Éxito", "Pedido eliminado correctamente.")
+            self.cargar_pedidos()
 
+# Crear y ejecutar la aplicación
 if __name__ == "__main__":
     app = App()
     app.mainloop()
