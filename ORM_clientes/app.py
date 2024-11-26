@@ -1,49 +1,88 @@
 import customtkinter as ctk
-from tkinter import messagebox, ttk
-
-# Datos locales en memoria
-clientes = []
-pedidos = []
+from tkinter import ttk
 
 # Configuración de la ventana principal
-ctk.set_appearance_mode("System")  # Opciones: "System", "Dark", "Light"
-ctk.set_default_color_theme("dark-blue")  # Opciones: "blue", "green", "dark-blue"
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("dark-blue")
+
 
 class App(ctk.CTk):
-    def __init__(self): 
+    def __init__(self):
         super().__init__()
 
-        self.title("Gestión de Clientes y Pedidos")
+        self.title("Gestión de Ingredientes y Pedidos")
         self.geometry("750x600")
+
+        self.pedido_id_counter = 1  # Contador para IDs de pedidos
 
         # Crear el Tabview (pestañas)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(pady=20, padx=20, fill="both", expand=True)
 
-        # Pestaña de Clientes
+        # Pestañas
+        self.tab_ingredientes = self.tabview.add("Ingredientes")
+        self.crear_formulario_ingrediente(self.tab_ingredientes)
+
+        self.tab_menu = self.tabview.add("Menú")
+        self.crear_formulario_menu(self.tab_menu)
+
         self.tab_clientes = self.tabview.add("Clientes")
         self.crear_formulario_cliente(self.tab_clientes)
 
-        # Pestaña de Pedidos
+        self.tab_panel_compra = self.tabview.add("Panel de Compra")
+
         self.tab_pedidos = self.tabview.add("Pedidos")
         self.crear_formulario_pedido(self.tab_pedidos)
 
-        # Revisar el cambio de pestaña periódicamente
-        self.current_tab = self.tabview.get()  # Almacena la pestaña actual
-        self.after(500, self.check_tab_change)  # Llama a check_tab_change cada 500 ms
+        self.tab_graficos = self.tabview.add("Gráficos")
 
-    def check_tab_change(self):
-        """Revisa si la pestaña activa cambió a 'Pedidos'."""
-        new_tab = self.tabview.get()
-        if new_tab != self.current_tab:
-            self.current_tab = new_tab
-            if new_tab == "Pedidos":
-                self.actualizar_emails_combobox()
-        self.after(500, self.check_tab_change)  # Vuelve a revisar cada 500 ms
+    def crear_formulario_menu(self, parent):
+        frame_superior = ctk.CTkFrame(parent)
+        frame_superior.pack(pady=10, padx=10, fill="x")
+
+        ctk.CTkLabel(frame_superior, text="Nombre del Menú").grid(row=0, column=0, pady=10, padx=10)
+        self.entry_nombre_menu = ctk.CTkEntry(frame_superior)
+        self.entry_nombre_menu.grid(row=0, column=1, pady=10, padx=10)
+
+        ctk.CTkLabel(frame_superior, text="Descripción").grid(row=0, column=2, pady=10, padx=10)
+        self.entry_descripcion_menu = ctk.CTkEntry(frame_superior)
+        self.entry_descripcion_menu.grid(row=0, column=3, pady=10, padx=10)
+
+        self.btn_crear_menu = ctk.CTkButton(frame_superior, text="Crear Menú", command=self.crear_menu)
+        self.btn_crear_menu.grid(row=1, column=0, columnspan=4, pady=10, padx=10)
+
+        frame_inferior = ctk.CTkFrame(parent)
+        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
+
+        self.treeview_menu = ttk.Treeview(frame_inferior, columns=("Nombre", "Descripción"), show="headings")
+        self.treeview_menu.heading("Nombre", text="Nombre")
+        self.treeview_menu.heading("Descripción", text="Descripción")
+        self.treeview_menu.pack(pady=10, padx=10, fill="both", expand=True)
+
+    def crear_formulario_ingrediente(self, parent):
+        frame_superior = ctk.CTkFrame(parent)
+        frame_superior.pack(pady=10, padx=10, fill="x")
+
+        ctk.CTkLabel(frame_superior, text="Nombre").grid(row=0, column=0, pady=10, padx=10)
+        self.entry_nombre_ingrediente = ctk.CTkEntry(frame_superior)
+        self.entry_nombre_ingrediente.grid(row=0, column=1, pady=10, padx=10)
+
+        ctk.CTkLabel(frame_superior, text="Tipo").grid(row=0, column=2, pady=10, padx=10)
+        self.entry_tipo_ingrediente = ctk.CTkEntry(frame_superior)
+        self.entry_tipo_ingrediente.grid(row=0, column=3, pady=10, padx=10)
+
+        self.btn_crear_ingrediente = ctk.CTkButton(frame_superior, text="Crear Ingrediente", command=self.crear_ingrediente)
+        self.btn_crear_ingrediente.grid(row=1, column=0, pady=10, padx=10)
+
+        frame_inferior = ctk.CTkFrame(parent)
+        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
+
+        self.treeview_ingredientes = ttk.Treeview(frame_inferior, columns=("Nombre", "Tipo"), show="headings")
+        self.treeview_ingredientes.heading("Nombre", text="Nombre")
+        self.treeview_ingredientes.heading("Tipo", text="Tipo")
+        self.treeview_ingredientes.pack(pady=10, padx=10, fill="both", expand=True)
 
     def crear_formulario_cliente(self, parent):
-        """Crea el formulario en el Frame superior y el Treeview en el Frame inferior para la gestión de clientes."""
-        # Frame superior para el formulario y botones
         frame_superior = ctk.CTkFrame(parent)
         frame_superior.pack(pady=10, padx=10, fill="x")
 
@@ -55,169 +94,85 @@ class App(ctk.CTk):
         self.entry_email = ctk.CTkEntry(frame_superior)
         self.entry_email.grid(row=0, column=3, pady=10, padx=10)
 
-        # Botones alineados horizontalmente en el frame superior
         self.btn_crear_cliente = ctk.CTkButton(frame_superior, text="Crear Cliente", command=self.crear_cliente)
         self.btn_crear_cliente.grid(row=1, column=0, pady=10, padx=10)
 
-        self.btn_actualizar_cliente = ctk.CTkButton(frame_superior, text="Actualizar Cliente", command=self.actualizar_cliente)
-        self.btn_actualizar_cliente.grid(row=1, column=1, pady=10, padx=10)
-
-        self.btn_eliminar_cliente = ctk.CTkButton(frame_superior, text="Eliminar Cliente", command=self.eliminar_cliente)
-        self.btn_eliminar_cliente.grid(row=1, column=2, pady=10, padx=10)
-
-        # Frame inferior para el Treeview
         frame_inferior = ctk.CTkFrame(parent)
         frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
 
-        # Treeview para mostrar los clientes
         self.treeview_clientes = ttk.Treeview(frame_inferior, columns=("Email", "Nombre"), show="headings")
         self.treeview_clientes.heading("Email", text="Email")
         self.treeview_clientes.heading("Nombre", text="Nombre")
         self.treeview_clientes.pack(pady=10, padx=10, fill="both", expand=True)
 
-        self.cargar_clientes()
-
     def crear_formulario_pedido(self, parent):
-        """Crea el formulario en el Frame superior y el Treeview en el Frame inferior para la gestión de pedidos."""
-        # Frame superior para el formulario y botones
         frame_superior = ctk.CTkFrame(parent)
         frame_superior.pack(pady=10, padx=10, fill="x")
 
         ctk.CTkLabel(frame_superior, text="Cliente Email").grid(row=0, column=0, pady=10, padx=10)
-        
-        # Combobox para seleccionar el email del cliente
-        self.combobox_cliente_email = ttk.Combobox(frame_superior, state="readonly")
+        self.combobox_cliente_email = ctk.CTkComboBox(frame_superior, state="readonly", values=[])
         self.combobox_cliente_email.grid(row=0, column=1, pady=10, padx=10)
-        self.actualizar_emails_combobox()  # Llenar el combobox con emails de los clientes
 
         ctk.CTkLabel(frame_superior, text="Descripción").grid(row=0, column=2, pady=10, padx=10)
         self.entry_descripcion = ctk.CTkEntry(frame_superior)
         self.entry_descripcion.grid(row=0, column=3, pady=10, padx=10)
 
-        # Botones alineados horizontalmente en el frame superior
         self.btn_crear_pedido = ctk.CTkButton(frame_superior, text="Crear Pedido", command=self.crear_pedido)
         self.btn_crear_pedido.grid(row=1, column=0, pady=10, padx=10)
 
-        self.btn_actualizar_pedido = ctk.CTkButton(frame_superior, text="Actualizar Pedido", command=self.actualizar_pedido)
-        self.btn_actualizar_pedido.grid(row=1, column=1, pady=10, padx=10)
-
-        self.btn_eliminar_pedido = ctk.CTkButton(frame_superior, text="Eliminar Pedido", command=self.eliminar_pedido)
-        self.btn_eliminar_pedido.grid(row=1, column=2, pady=10, padx=10)
-
-        # Frame inferior para el Treeview
         frame_inferior = ctk.CTkFrame(parent)
         frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
 
-        # Treeview para mostrar los pedidos
-        self.treeview_pedidos = ttk.Treeview(frame_inferior, columns=("ID", "Cliente Email", "Descripción"), show="headings")
+        self.treeview_pedidos = ttk.Treeview(frame_inferior, columns=("ID", "Cliente", "Descripción"), show="headings")
         self.treeview_pedidos.heading("ID", text="ID")
-        self.treeview_pedidos.heading("Cliente Email", text="Cliente Email")
+        self.treeview_pedidos.heading("Cliente", text="Cliente")
         self.treeview_pedidos.heading("Descripción", text="Descripción")
         self.treeview_pedidos.pack(pady=10, padx=10, fill="both", expand=True)
-
-        self.cargar_pedidos()
-
-    # Método para actualizar los correos electrónicos en el Combobox
-    def actualizar_emails_combobox(self):
-        """Llena el Combobox con los emails de los clientes."""
-        emails = [cliente["email"] for cliente in clientes]
-        self.combobox_cliente_email['values'] = emails
-
-    # Métodos CRUD para Clientes
-    def cargar_clientes(self):
-        self.treeview_clientes.delete(*self.treeview_clientes.get_children())
-        for cliente in clientes:
-            self.treeview_clientes.insert("", "end", values=(cliente["email"], cliente["nombre"]))
 
     def crear_cliente(self):
         nombre = self.entry_nombre.get()
         email = self.entry_email.get()
         if nombre and email:
-            if any(cliente["email"] == email for cliente in clientes):
-                messagebox.showwarning("Error", "El cliente ya existe.")
-            else:
-                clientes.append({"nombre": nombre, "email": email})
-                messagebox.showinfo("Éxito", "Cliente creado correctamente.")
-                self.cargar_clientes()
-                self.actualizar_emails_combobox()  # Actualizar el Combobox con el nuevo email
+            self.treeview_clientes.insert("", "end", values=(email, nombre))
+            print(f"Cliente {nombre} con email {email} creado.")
+            self.actualizar_combobox()
         else:
-            messagebox.showwarning("Campos Vacíos", "Por favor, ingrese todos los campos.")
-
-    def actualizar_cliente(self):
-        selected_item = self.treeview_clientes.selection()
-        if not selected_item:
-            messagebox.showwarning("Selección", "Por favor, seleccione un cliente.")
-            return
-        nombre = self.entry_nombre.get()
-        email = self.entry_email.get()
-        if not nombre.strip():
-            messagebox.showwarning("Campo Vacío", "Por favor, ingrese un nombre.")
-            return
-        if not email.strip():
-            messagebox.showwarning("Campo Vacío", "Por favor, ingrese un email.")
-            return
-        email_viejo = self.treeview_clientes.item(selected_item)["values"][0]
-        for cliente in clientes:
-            if cliente["email"] == email_viejo:
-                cliente["nombre"] = nombre
-                cliente["email"] = email
-                messagebox.showinfo("Éxito", "Cliente actualizado correctamente.")
-                self.cargar_clientes()
-                break
-
-    def eliminar_cliente(self):
-        selected_item = self.treeview_clientes.selection()
-        if selected_item:
-            email = self.treeview_clientes.item(selected_item)["values"][0]
-            clientes[:] = [cliente for cliente in clientes if cliente["email"] != email]
-            messagebox.showinfo("Éxito", "Cliente eliminado correctamente.")
-            self.cargar_clientes()
-
-    # Métodos CRUD para Pedidos
-    def cargar_pedidos(self):
-        self.treeview_pedidos.delete(*self.treeview_pedidos.get_children())
-        for pedido in pedidos:
-            self.treeview_pedidos.insert("", "end", values=(pedido["id"], pedido["cliente_email"], pedido["descripcion"]))
+            print("Error: Completa todos los campos para crear el cliente.")
 
     def crear_pedido(self):
         cliente_email = self.combobox_cliente_email.get()
         descripcion = self.entry_descripcion.get()
         if cliente_email and descripcion:
-            id_pedido = len(pedidos) + 1
-            pedidos.append({"id": id_pedido, "cliente_email": cliente_email, "descripcion": descripcion})
-            messagebox.showinfo("Éxito", "Pedido creado correctamente.")
-            self.cargar_pedidos()
+            self.treeview_pedidos.insert("", "end", values=(self.pedido_id_counter, cliente_email, descripcion))
+            print(f"Pedido creado para {cliente_email}: {descripcion}")
+            self.pedido_id_counter += 1
         else:
-            messagebox.showwarning("Campos Vacíos", "Por favor, ingrese todos los campos.")
+            print("Error: Completa todos los campos para crear el pedido.")
 
-    def actualizar_pedido(self):
-        selected_item = self.treeview_pedidos.selection()
-        if not selected_item:
-            messagebox.showwarning("Selección", "Por favor, seleccione un pedido.")
-            return
-        cliente_email = self.combobox_cliente_email.get()
-        descripcion = self.entry_descripcion.get()
-        if cliente_email and descripcion:
-            id_pedido = self.treeview_pedidos.item(selected_item)["values"][0]
-            for pedido in pedidos:
-                if pedido["id"] == id_pedido:
-                    pedido["cliente_email"] = cliente_email
-                    pedido["descripcion"] = descripcion
-                    messagebox.showinfo("Éxito", "Pedido actualizado correctamente.")
-                    self.cargar_pedidos()
-                    break
+    def crear_menu(self):
+        nombre_menu = self.entry_nombre_menu.get()
+        descripcion_menu = self.entry_descripcion_menu.get()
+        if nombre_menu and descripcion_menu:
+            self.treeview_menu.insert("", "end", values=(nombre_menu, descripcion_menu))
+            print(f"Menú creado: {nombre_menu}, Descripción={descripcion_menu}")
         else:
-            messagebox.showwarning("Campos Vacíos", "Por favor, ingrese todos los campos.")
+            print("Error: Completa todos los campos para crear el menú.")
 
-    def eliminar_pedido(self):
-        selected_item = self.treeview_pedidos.selection()
-        if selected_item:
-            id_pedido = self.treeview_pedidos.item(selected_item)["values"][0]
-            pedidos[:] = [pedido for pedido in pedidos if pedido["id"] != id_pedido]
-            messagebox.showinfo("Éxito", "Pedido eliminado correctamente.")
-            self.cargar_pedidos()
+    def crear_ingrediente(self):
+        nombre_ingrediente = self.entry_nombre_ingrediente.get()
+        tipo_ingrediente = self.entry_tipo_ingrediente.get()
+        if nombre_ingrediente and tipo_ingrediente:
+            self.treeview_ingredientes.insert("", "end", values=(nombre_ingrediente, tipo_ingrediente))
+            print(f"Ingrediente creado: {nombre_ingrediente}, Tipo={tipo_ingrediente}")
+        else:
+            print("Error: Completa todos los campos para crear el ingrediente.")
 
-# Crear y ejecutar la aplicación
+    def actualizar_combobox(self):
+        # Actualizar los valores del combobox con los emails de los clientes
+        self.combobox_cliente_email.set('')
+        self.combobox_cliente_email.configure(values=[child[0] for child in self.treeview_clientes.get_children()])
+
+
 if __name__ == "__main__":
     app = App()
     app.mainloop()
