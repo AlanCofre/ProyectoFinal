@@ -35,6 +35,7 @@ class App(ctk.CTk):
         self.crear_formulario_pedido(self.tab_pedidos)
 
         self.tab_graficos = self.tabview.add("Gráficos")
+        self.crear_dropdown_graficos(self.tab_graficos)  # Llamada para crear el dropdown en "Gráficos"
 
     def crear_formulario_menu(self, parent):
         frame_superior = ctk.CTkFrame(parent)
@@ -154,7 +155,7 @@ class App(ctk.CTk):
         descripcion_menu = self.entry_descripcion_menu.get()
         if nombre_menu and descripcion_menu:
             self.treeview_menu.insert("", "end", values=(nombre_menu, descripcion_menu))
-            print(f"Menú creado: {nombre_menu}, Descripción={descripcion_menu}")
+            print(f"Menú {nombre_menu} creado.")
         else:
             print("Error: Completa todos los campos para crear el menú.")
 
@@ -163,14 +164,27 @@ class App(ctk.CTk):
         tipo_ingrediente = self.entry_tipo_ingrediente.get()
         if nombre_ingrediente and tipo_ingrediente:
             self.treeview_ingredientes.insert("", "end", values=(nombre_ingrediente, tipo_ingrediente))
-            print(f"Ingrediente creado: {nombre_ingrediente}, Tipo={tipo_ingrediente}")
+            print(f"Ingrediente {nombre_ingrediente} creado.")
         else:
             print("Error: Completa todos los campos para crear el ingrediente.")
 
     def actualizar_combobox(self):
-        # Actualizar los valores del combobox con los emails de los clientes
         self.combobox_cliente_email.set('')
-        self.combobox_cliente_email.configure(values=[child[0] for child in self.treeview_clientes.get_children()])
+        self.combobox_cliente_email.set([item[0] for item in self.treeview_clientes.get_children()])
+
+    def crear_dropdown_graficos(self, parent):
+        # Frame superior
+        frame_superior = ctk.CTkFrame(parent)
+        frame_superior.pack(pady=10, padx=10, fill="x")
+
+        # Crear el Label para el dropdown
+        label = ctk.CTkLabel(frame_superior, text="Elige el gráfico", anchor="center")
+        label.grid(row=0, column=0, pady=10, padx=10)
+
+        # Crear el dropdown con opciones
+        opciones = ["Gráfico de Ventas", "Gráfico de Ingredientes", "Gráfico de Clientes"]
+        dropdown = ctk.CTkComboBox(frame_superior, values=opciones, state="normal")
+        dropdown.grid(row=1, column=0, pady=10, padx=10)
 
 
 if __name__ == "__main__":
