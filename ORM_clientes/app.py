@@ -66,11 +66,11 @@ class App(ctk.CTk):
         self.treeview_menu.pack(pady=10, padx=10, fill="both", expand=True)
 
     def crear_menu(self):
+        # Lógica para crear un menú
         nombre_menu = self.entry_nombre_menu.get()
         descripcion_menu = self.entry_descripcion_menu.get()
         if nombre_menu and descripcion_menu:
             self.treeview_menu.insert("", "end", values=(nombre_menu, descripcion_menu))
-            self.dropdown_menu.configure(values=[menu[0] for menu in self.menu_dict.items()])
             print(f"Menú {nombre_menu} creado.")
         else:
             print("Error: Completa todos los campos para crear el menú.")
@@ -141,6 +141,7 @@ class App(ctk.CTk):
         self.treeview_ingredientes.pack(pady=10, padx=10, fill="both", expand=True)
 
     def crear_ingrediente(self):
+        # Lógica para crear un ingrediente
         nombre_ingrediente = self.entry_nombre_ingrediente.get()
         tipo_ingrediente = self.entry_tipo_ingrediente.get()
         if nombre_ingrediente and tipo_ingrediente:
@@ -161,9 +162,13 @@ class App(ctk.CTk):
         self.entry_email = ctk.CTkEntry(frame_superior)
         self.entry_email.grid(row=0, column=3, pady=10, padx=10, sticky="w")
 
-        # Botón alineado a la izquierda
+        # Botones de crear y editar cliente alineados a la izquierda
         self.btn_crear_cliente = ctk.CTkButton(frame_superior, text="Crear Cliente", command=self.crear_cliente)
         self.btn_crear_cliente.grid(row=1, column=0, columnspan=1, pady=10, padx=10, sticky="w")
+
+        # Botón "Editar Cliente" alineado a la derecha
+        self.btn_editar_cliente = ctk.CTkButton(frame_superior, text="Editar Cliente", command=self.editar_cliente)
+        self.btn_editar_cliente.grid(row=1, column=1, pady=10, padx=10, sticky="e")
 
         frame_inferior = ctk.CTkFrame(parent)
         frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
@@ -174,6 +179,7 @@ class App(ctk.CTk):
         self.treeview_clientes.pack(pady=10, padx=10, fill="both", expand=True)
 
     def crear_cliente(self):
+        # Lógica para crear un cliente
         nombre = self.entry_nombre.get()
         email = self.entry_email.get()
         if nombre and email:
@@ -181,6 +187,24 @@ class App(ctk.CTk):
             print(f"Cliente {nombre} creado.")
         else:
             print("Error: Completa todos los campos para crear el cliente.")
+
+    def editar_cliente(self):
+        # Obtener la selección de la tabla
+        selected_item = self.treeview_clientes.selection()
+        if selected_item:
+            # Obtener los datos del cliente seleccionado
+            cliente = self.treeview_clientes.item(selected_item[0], "values")
+            nombre, email = cliente[0], cliente[1]
+            
+            # Poner los datos en los campos de texto para su edición
+            self.entry_nombre.delete(0, "end")
+            self.entry_nombre.insert(0, nombre)
+            self.entry_email.delete(0, "end")
+            self.entry_email.insert(0, email)
+
+            print(f"Cliente seleccionado para editar: {nombre}, {email}")
+        else:
+            print("Error: No se seleccionó ningún cliente.")
 
     def crear_formulario_pedido(self, parent):
         frame_superior = ctk.CTkFrame(parent)
