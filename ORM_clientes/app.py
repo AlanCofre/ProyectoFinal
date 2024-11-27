@@ -37,23 +37,26 @@ class App(ctk.CTk):
         self.crear_formulario_pedido(self.tab_pedidos)
 
         self.tab_graficos = self.tabview.add("Gráficos")
-        self.crear_dropdown_graficos(self.tab_graficos)  # Llamada para crear el dropdown en "Gráficos"
+        self.crear_dropdown_graficos(self.tab_graficos)
 
     def crear_formulario_menu(self, parent):
         frame_superior = ctk.CTkFrame(parent)
         frame_superior.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(frame_superior, text="Nombre del Menú").grid(row=0, column=0, pady=10, padx=10)
+        # Campos de texto
+        ctk.CTkLabel(frame_superior, text="Nombre del Menú").grid(row=0, column=0, pady=10, padx=10, sticky="w")
         self.entry_nombre_menu = ctk.CTkEntry(frame_superior)
-        self.entry_nombre_menu.grid(row=0, column=1, pady=10, padx=10)
+        self.entry_nombre_menu.grid(row=0, column=1, pady=10, padx=10, sticky="w")
 
-        ctk.CTkLabel(frame_superior, text="Descripción").grid(row=0, column=2, pady=10, padx=10)
+        ctk.CTkLabel(frame_superior, text="Descripción").grid(row=0, column=2, pady=10, padx=10, sticky="w")
         self.entry_descripcion_menu = ctk.CTkEntry(frame_superior)
-        self.entry_descripcion_menu.grid(row=0, column=3, pady=10, padx=10)
+        self.entry_descripcion_menu.grid(row=0, column=3, pady=10, padx=10, sticky="w")
 
+        # Botón alineado a la izquierda
         self.btn_crear_menu = ctk.CTkButton(frame_superior, text="Crear Menú", command=self.crear_menu)
-        self.btn_crear_menu.grid(row=1, column=0, columnspan=4, pady=10, padx=10)
+        self.btn_crear_menu.grid(row=1, column=0, columnspan=4, pady=10, sticky="w")
 
+        # Tabla
         frame_inferior = ctk.CTkFrame(parent)
         frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
 
@@ -61,32 +64,6 @@ class App(ctk.CTk):
         self.treeview_menu.heading("Nombre", text="Nombre")
         self.treeview_menu.heading("Descripción", text="Descripción")
         self.treeview_menu.pack(pady=10, padx=10, fill="both", expand=True)
-
-    def crear_formulario_panel_compra(self, parent):
-        # Frame superior
-        frame_superior = ctk.CTkFrame(parent)
-        frame_superior.pack(pady=10, padx=10, fill="x")
-
-        # Menú y Dropdown
-        ctk.CTkLabel(frame_superior, text="Menú").grid(row=0, column=0, pady=10, padx=10)
-        self.dropdown_menu = ctk.CTkComboBox(frame_superior, state="normal", values=[])
-        self.dropdown_menu.grid(row=0, column=1, pady=10, padx=10)
-
-        self.btn_agregar_compra = ctk.CTkButton(frame_superior, text="Agregar a la compra", command=self.agregar_a_compra)
-        self.btn_agregar_compra.grid(row=0, column=2, pady=10, padx=10)
-
-        # Tabla de compras
-        frame_inferior = ctk.CTkFrame(parent)
-        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
-
-        self.treeview_compra = ttk.Treeview(frame_inferior, columns=("Menú", "Cantidad"), show="headings")
-        self.treeview_compra.heading("Menú", text="Menú")
-        self.treeview_compra.heading("Cantidad", text="Cantidad")
-        self.treeview_compra.pack(pady=10, padx=10, fill="both", expand=True)
-
-        # Botón para generar boleta
-        self.btn_generar_boleta = ctk.CTkButton(parent, text="Generar Boleta", command=self.generar_boleta)
-        self.btn_generar_boleta.pack(pady=20)
 
     def crear_menu(self):
         nombre_menu = self.entry_nombre_menu.get()
@@ -97,6 +74,29 @@ class App(ctk.CTk):
             print(f"Menú {nombre_menu} creado.")
         else:
             print("Error: Completa todos los campos para crear el menú.")
+
+    def crear_formulario_panel_compra(self, parent):
+        frame_superior = ctk.CTkFrame(parent)
+        frame_superior.pack(pady=10, padx=10, fill="x")
+
+        ctk.CTkLabel(frame_superior, text="Menú").grid(row=0, column=0, pady=10, padx=10, sticky="w")
+        self.dropdown_menu = ctk.CTkComboBox(frame_superior, state="normal", values=[])
+        self.dropdown_menu.grid(row=0, column=1, pady=10, padx=10, sticky="w")
+
+        # Botón alineado a la izquierda
+        self.btn_agregar_compra = ctk.CTkButton(frame_superior, text="Agregar a la compra", command=self.agregar_a_compra)
+        self.btn_agregar_compra.grid(row=1, column=0, columnspan=1, pady=10, padx=10, sticky="w")
+
+        frame_inferior = ctk.CTkFrame(parent)
+        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
+
+        self.treeview_compra = ttk.Treeview(frame_inferior, columns=("Menú", "Cantidad"), show="headings")
+        self.treeview_compra.heading("Menú", text="Menú")
+        self.treeview_compra.heading("Cantidad", text="Cantidad")
+        self.treeview_compra.pack(pady=10, padx=10, fill="both", expand=True)
+
+        self.btn_generar_boleta = ctk.CTkButton(parent, text="Generar Boleta", command=self.generar_boleta)
+        self.btn_generar_boleta.pack(pady=10, padx=10)
 
     def agregar_a_compra(self):
         menu_seleccionado = self.dropdown_menu.get()
@@ -120,16 +120,17 @@ class App(ctk.CTk):
         frame_superior = ctk.CTkFrame(parent)
         frame_superior.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(frame_superior, text="Nombre").grid(row=0, column=0, pady=10, padx=10)
+        ctk.CTkLabel(frame_superior, text="Nombre").grid(row=0, column=0, pady=10, padx=10, sticky="w")
         self.entry_nombre_ingrediente = ctk.CTkEntry(frame_superior)
-        self.entry_nombre_ingrediente.grid(row=0, column=1, pady=10, padx=10)
+        self.entry_nombre_ingrediente.grid(row=0, column=1, pady=10, padx=10, sticky="w")
 
-        ctk.CTkLabel(frame_superior, text="Tipo").grid(row=0, column=2, pady=10, padx=10)
+        ctk.CTkLabel(frame_superior, text="Tipo").grid(row=0, column=2, pady=10, padx=10, sticky="w")
         self.entry_tipo_ingrediente = ctk.CTkEntry(frame_superior)
-        self.entry_tipo_ingrediente.grid(row=0, column=3, pady=10, padx=10)
+        self.entry_tipo_ingrediente.grid(row=0, column=3, pady=10, padx=10, sticky="w")
 
+        # Botón alineado a la izquierda
         self.btn_crear_ingrediente = ctk.CTkButton(frame_superior, text="Crear Ingrediente", command=self.crear_ingrediente)
-        self.btn_crear_ingrediente.grid(row=1, column=0, pady=10, padx=10)
+        self.btn_crear_ingrediente.grid(row=1, column=0, columnspan=4, pady=10, sticky="w")
 
         frame_inferior = ctk.CTkFrame(parent)
         frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
@@ -152,16 +153,17 @@ class App(ctk.CTk):
         frame_superior = ctk.CTkFrame(parent)
         frame_superior.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(frame_superior, text="Nombre").grid(row=0, column=0, pady=10, padx=10)
+        ctk.CTkLabel(frame_superior, text="Nombre").grid(row=0, column=0, pady=10, padx=10, sticky="w")
         self.entry_nombre = ctk.CTkEntry(frame_superior)
-        self.entry_nombre.grid(row=0, column=1, pady=10, padx=10)
+        self.entry_nombre.grid(row=0, column=1, pady=10, padx=10, sticky="w")
 
-        ctk.CTkLabel(frame_superior, text="Email").grid(row=0, column=2, pady=10, padx=10)
+        ctk.CTkLabel(frame_superior, text="Email").grid(row=0, column=2, pady=10, padx=10, sticky="w")
         self.entry_email = ctk.CTkEntry(frame_superior)
-        self.entry_email.grid(row=0, column=3, pady=10, padx=10)
+        self.entry_email.grid(row=0, column=3, pady=10, padx=10, sticky="w")
 
+        # Botón alineado a la izquierda
         self.btn_crear_cliente = ctk.CTkButton(frame_superior, text="Crear Cliente", command=self.crear_cliente)
-        self.btn_crear_cliente.grid(row=1, column=0, columnspan=4, pady=10, padx=10)
+        self.btn_crear_cliente.grid(row=1, column=0, columnspan=1, pady=10, padx=10, sticky="w")
 
         frame_inferior = ctk.CTkFrame(parent)
         frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
@@ -184,12 +186,13 @@ class App(ctk.CTk):
         frame_superior = ctk.CTkFrame(parent)
         frame_superior.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(frame_superior, text="ID Pedido").grid(row=0, column=0, pady=10, padx=10)
+        ctk.CTkLabel(frame_superior, text="ID Pedido").grid(row=0, column=0, pady=10, padx=10, sticky="w")
         self.entry_id_pedido = ctk.CTkEntry(frame_superior)
-        self.entry_id_pedido.grid(row=0, column=1, pady=10, padx=10)
+        self.entry_id_pedido.grid(row=0, column=1, pady=10, padx=10, sticky="w")
 
+        # Botón alineado a la izquierda
         self.btn_crear_pedido = ctk.CTkButton(frame_superior, text="Crear Pedido", command=self.crear_pedido)
-        self.btn_crear_pedido.grid(row=1, column=0, columnspan=2, pady=10, padx=10)
+        self.btn_crear_pedido.grid(row=1, column=0, columnspan=1, pady=10, padx=10, sticky="w")
 
         frame_inferior = ctk.CTkFrame(parent)
         frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
@@ -213,21 +216,13 @@ class App(ctk.CTk):
         frame_graficos.pack(pady=10, padx=10, fill="x")
 
         ctk.CTkLabel(frame_graficos, text="Selecciona un gráfico").grid(row=0, column=0, pady=10, padx=10)
-        
-        # Dropdown con tres opciones
-        self.dropdown_graficos = ctk.CTkComboBox(
-            frame_graficos, 
-            state="normal", 
-            values=["Opción 1", "Opción 2", "Opción 3"]
-        )
+
+        self.dropdown_graficos = ctk.CTkComboBox(frame_graficos, state="normal", values=["Opción 1", "Opción 2", "Opción 3"])
         self.dropdown_graficos.grid(row=0, column=1, pady=10, padx=10)
-        
-        self.btn_seleccionar_grafico = ctk.CTkButton(
-            frame_graficos, 
-            text="Seleccionar Gráfico", 
-            command=self.seleccionar_grafico
-        )
-        self.btn_seleccionar_grafico.grid(row=0, column=2, pady=10, padx=10)
+
+        # Botón alineado a la izquierda
+        self.btn_seleccionar_grafico = ctk.CTkButton(frame_graficos, text="Seleccionar Gráfico", command=self.seleccionar_grafico)
+        self.btn_seleccionar_grafico.grid(row=0, column=2, pady=10, sticky="w")
 
     def seleccionar_grafico(self):
         opcion_seleccionada = self.dropdown_graficos.get()
