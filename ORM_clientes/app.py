@@ -258,24 +258,25 @@ class RestauranteApp(ctk.CTk):
             correo_cliente = cliente_seleccionado[1]
 
             # Pedir nuevos datos
-            nuevo_nombre = ctk.CTkInputDialog(text="Nuevo nombre del Cliente", title="Editar Cliente")
-            nuevo_nombre.set(text_input=nombre_cliente)  # Establecer el valor inicial para el nombre
-            nuevo_correo = ctk.CTkInputDialog(text="Nuevo correo del Cliente", title="Editar Cliente")
-            nuevo_correo.set(text_input=correo_cliente)  # Establecer el valor inicial para el correo
+            nuevo_nombre = ctk.CTkInputDialog(
+                text=f"Nuevo nombre del Cliente ({nombre_cliente})",
+                title="Editar Cliente"
+            )
+            nuevo_nombre_cliente = nuevo_nombre.get_input().strip()
 
-            # Validar si los nuevos datos son correctos
-            if not nuevo_nombre.get_input().strip() or not nuevo_correo.get_input().strip():
-                messagebox.showerror("Error", "Los campos no pueden estar vacíos.")
+            if not nuevo_nombre_cliente:
+                messagebox.showerror("Error", "El nombre no puede estar vacío.")
                 return
 
-            # Actualizar cliente
+            # Actualizar el cliente en la lista
             for cliente in self.clientes:
                 if cliente["correo"] == correo_cliente:
-                    cliente["nombre"] = nuevo_nombre.get_input().strip()
-                    cliente["correo"] = nuevo_correo.get_input().strip()
+                    cliente["nombre"] = nuevo_nombre_cliente
 
             self.actualizar_treeview_clientes()
-            messagebox.showinfo("Éxito", "Cliente actualizado correctamente.")
+            messagebox.showinfo("Éxito", f"Cliente '{nombre_cliente}' actualizado correctamente.")
+
+
 
 
     def eliminar_cliente(self):
