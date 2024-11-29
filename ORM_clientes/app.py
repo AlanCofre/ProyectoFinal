@@ -353,7 +353,7 @@ class RestauranteApp(ctk.CTk):
     def graficar_ingredientes_usados(self):
         import matplotlib.pyplot as plt
 
-        ingredientes = [ing["nombre"] for ing in self.stock]
+        ingredientes = [f"{ing['nombre']} - {ing['cantidad']}" for ing in self.stock]
         cantidades = [ing["cantidad"] for ing in self.stock]
 
         plt.pie(cantidades, labels=ingredientes, autopct="%1.1f%%")
