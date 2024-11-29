@@ -31,7 +31,7 @@ class RestauranteApp(ctk.CTk):
         self.setup_ingreso_ingredientes()
         self.setup_menus()
         self.setup_clientes()
-        self.setup_pedido()
+        self.setup_pedido()  
         self.setup_graficos()
 
     # ------------------- INGREDIENTES ------------------- #
@@ -176,8 +176,10 @@ class RestauranteApp(ctk.CTk):
         self.actualizar_treeview_ingredientes_menu()
         self.actualizar_treeview_menus()
 
-        messagebox.showinfo("Éxito", f"Menú '{nombre}' creado correctamente.")
+        # Verificar que el menú se agregó
+        print(f"Menús: {self.menus}")  # Verifica si el menú fue agregado
 
+        messagebox.showinfo("Éxito", f"Menú '{nombre}' creado correctamente.")
 
     def solicitar_cantidad_ing(self, nombre, cantidad_disponible):
         # Ventana emergente para pedir cantidad
@@ -199,6 +201,7 @@ class RestauranteApp(ctk.CTk):
             self.treeview_menus.delete(item)
         for menu in self.menus:
             self.treeview_menus.insert("", "end", values=(menu["nombre"], menu["descripcion"]))
+
 
     # ------------------- CLIENTES ------------------- #
     def setup_clientes(self):
@@ -236,98 +239,131 @@ class RestauranteApp(ctk.CTk):
         self.clientes.append({"nombre": nombre, "correo": correo})
         self.actualizar_treeview_clientes()
 
+        # Verificar que el cliente fue agregado
+        print(f"Clientes: {self.clientes}")  # Verifica si el cliente fue agregado
+
+        messagebox.showinfo("Éxito", f"Cliente '{nombre}' registrado correctamente.")
+
+
     def actualizar_treeview_clientes(self):
         for item in self.treeview_clientes.get_children():
             self.treeview_clientes.delete(item)
         for cliente in self.clientes:
             self.treeview_clientes.insert("", "end", values=(cliente["nombre"], cliente["correo"]))
 
+
+
+  
     # ------------------- PEDIDOS ------------------- #
     def setup_pedido(self):
         frame = ctk.CTkFrame(self.tab_pedido)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Dropdown para seleccionar cliente
-        ctk.CTkLabel(frame, text="Cliente").pack(pady=5)
-        self.dropdown_cliente_pedido = ctk.CTkComboBox(frame, values=[c["nombre"] for c in self.clientes])
-        self.dropdown_cliente_pedido.pack(pady=5)
+        # Tabla de Menús Creados con la cantidad disponible
+        ctk.CTkLabel(frame, text="Menús Creados y Cantidad Disponible").pack(pady=5)
+        self.treeview_menus_disponibles = ttk.Treeview(frame, columns=("Menú", "Cantidad Disponible"), show="headings")
+        self.treeview_menus_disponibles.heading("Menú", text="Menú")
+        self.treeview_menus_disponibles.heading("Cantidad Disponible", text="Cantidad Disponible")
+        self.treeview_menus_disponibles.pack(fill="both", expand=True, padx=10, pady=10)
+        self.actualizar_treeview_menus_disponibles()
 
-        # Dropdown para seleccionar menú
-        ctk.CTkLabel(frame, text="Menú").pack(pady=5)
-        self.dropdown_menu_pedido = ctk.CTkComboBox(frame, values=[m["nombre"] for m in self.menus])
-        self.dropdown_menu_pedido.pack(pady=5)
-
-        # Botones para agregar menús al pedido
-        ctk.CTkButton(frame, text="Agregar al Pedido", command=self.agregar_al_pedido).pack(pady=10)
-
-        # Tabla para mostrar el pedido
-        self.treeview_pedido = ttk.Treeview(frame, columns=("Menú", "Cantidad", "Precio"), show="headings")
-        self.treeview_pedido.heading("Menú", text="Menú")
-        self.treeview_pedido.heading("Cantidad", text="Cantidad")
-        self.treeview_pedido.heading("Precio", text="Precio")
-        self.treeview_pedido.pack(fill="both", expand=True, padx=10, pady=10)
+        # Tabla para seleccionar Clientes
+        ctk.CTkLabel(frame, text="Seleccionar Cliente").pack(pady=5)
+        self.treeview_clientes_select = ttk.Treeview(frame, columns=("Nombre", "Correo"), show="headings")
+        self.treeview_clientes_select.heading("Nombre", text="Nombre")
+        self.treeview_clientes_select.heading("Correo", text="Correo")
+        self.treeview_clientes_select.pack(fill="both", expand=True, padx=10, pady=10)
+        self.actualizar_treeview_clientes_select()
 
         # Botón para generar boleta
         ctk.CTkButton(frame, text="Generar Boleta", command=self.generar_boleta).pack(pady=10)
 
-    def agregar_al_pedido(self):
-        menu_seleccionado = self.dropdown_menu_pedido.get()
-        if not menu_seleccionado:
-            messagebox.showerror("Error", "Selecciona un menú para agregar al pedido.")
-            return
+    def actualizar_treeview_menus_disponibles(self):
+        for item in self.treeview_menus_disponibles.get_children():
+            self.treeview_menus_disponibles.delete(item)
 
         for menu in self.menus:
-            if menu["nombre"] == menu_seleccionado:
-                for item in self.pedidos:
-                    if item["menu"] == menu_seleccionado:
-                        item["cantidad"] += 1
-                        self.actualizar_treeview_pedido()
-                        return
-                self.pedidos.append({"menu": menu_seleccionado, "cantidad": 1, "precio": 500})  # Precio fijo por ejemplo
-                self.actualizar_treeview_pedido()
-                return
+            self.treeview_menus_disponibles.insert("", "end", values=(menu["nombre"], "Disponible"))
 
-    def actualizar_treeview_pedido(self):
-        for item in self.treeview_pedido.get_children():
-            self.treeview_pedido.delete(item)
-        for pedido in self.pedidos:
-            self.treeview_pedido.insert("", "end", values=(pedido["menu"], pedido["cantidad"], f"${pedido['cantidad'] * pedido['precio']}"))
+    def calcular_cantidad_menu(self, ingredientes_menu):
+        # Calcula cuántos menús se pueden hacer según los ingredientes disponibles
+        cantidad_disponible = float('inf')  # Inicializa con infinito
+        for ingrediente in ingredientes_menu:
+            for stock_ingrediente in self.stock:
+                if stock_ingrediente["nombre"] == ingrediente["nombre"]:
+                    cantidad_posible = stock_ingrediente["cantidad"] // ingrediente["cantidad"]
+                    cantidad_disponible = min(cantidad_disponible, cantidad_posible)
+        return cantidad_disponible
+
+    def actualizar_treeview_clientes_select(self):
+        for item in self.treeview_clientes_select.get_children():
+            self.treeview_clientes_select.delete(item)
+
+        # Mostrar los clientes disponibles
+        for cliente in self.clientes:
+            self.treeview_clientes_select.insert("", "end", values=(cliente["nombre"], cliente["correo"]))
 
     def generar_boleta(self):
-        if not self.pedidos:
-            messagebox.showerror("Error", "No hay pedidos para generar una boleta.")
+        cliente_seleccionado = self.treeview_clientes_select.selection()
+        if not cliente_seleccionado:
+            messagebox.showerror("Error", "Debe seleccionar un cliente.")
             return
-    
+
+        cliente = self.treeview_clientes_select.item(cliente_seleccionado, "values")
+        cliente_nombre = cliente[0]
+        cliente_correo = cliente[1]
+
+        # Recopilar los menús seleccionados
+        menues_seleccionados = self.treeview_menus_disponibles.selection()
+        if not menues_seleccionados:
+            messagebox.showerror("Error", "Debe seleccionar al menos un menú.")
+            return
+
+        # Crear el PDF
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
+    
+        # Título
         pdf.cell(200, 10, txt="Boleta de Pedido", ln=True, align="C")
-        pdf.ln(10)  # Salto de línea
-
-        # Información del cliente y pedido
-        cliente = self.dropdown_cliente_pedido.get()
-        pdf.cell(200, 10, txt=f"Cliente: {cliente}", ln=True)
-        pdf.cell(200, 10, txt=f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True)
     
+        # Información del Cliente
         pdf.ln(10)
-
+        pdf.cell(200, 10, txt=f"Cliente: {cliente_nombre}", ln=True)
+        pdf.cell(200, 10, txt=f"Correo: {cliente_correo}", ln=True)
+    
+        # Detalles del pedido
+        pdf.ln(10)
+        pdf.cell(200, 10, txt="Menú(s) Pedido(s):", ln=True)
         total_pedido = 0
-        for pedido in self.pedidos:
-            pdf.cell(100, 10, txt=f"{pedido['menu']}", border=1)
-            pdf.cell(50, 10, txt=str(pedido['cantidad']), border=1, align='C')
-            pdf.cell(50, 10, txt=f"${pedido['precio'] * pedido['cantidad']}", border=1, align='R')
-            pdf.ln(10)
-            total_pedido += pedido['precio'] * pedido['cantidad']
-    
+        for item in menues_seleccionados:
+            menu_nombre = self.treeview_menus_disponibles.item(item, "values")[0]
+            cantidad = 1  # Aquí podrías agregar lógica para preguntar cuántos menús
+            total_pedido += cantidad * 10  # Suponiendo un precio fijo, aquí debes calcular el precio real
+
+            pdf.cell(200, 10, txt=f"- {menu_nombre} x {cantidad} = ${cantidad * 10}", ln=True)
+
         pdf.ln(10)
-        pdf.cell(200, 10, txt=f"Total: ${total_pedido}", ln=True, align="R")
-    
-        # Guardar archivo PDF
-        filename = f"boleta_{cliente}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-        pdf.output(filename)
-        messagebox.showinfo("Éxito", f"Boleta generada: {filename}")
+        pdf.cell(200, 10, txt=f"Total: ${total_pedido}", ln=True)
+
+        # Guardar el PDF
+        pdf.output(f"boleta_{cliente_nombre}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf")
+        messagebox.showinfo("Éxito", "Boleta generada correctamente.")
 
 
+    def crear_pdf_boleta(self, boleta_texto):
+        # Crear un documento PDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        pdf.multi_cell(0, 10, boleta_texto)
+
+        # Guardar el archivo PDF
+        nombre_archivo = f"boleta_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        pdf.output(nombre_archivo)
+
+        messagebox.showinfo("Éxito", f"Boleta generada: {nombre_archivo}")
 
     # ------------------- GRÁFICOS ------------------- #
     def setup_graficos(self):
