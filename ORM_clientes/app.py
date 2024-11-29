@@ -70,10 +70,13 @@ class RestauranteApp(ctk.CTk):
             if ing["nombre"] == nombre:
                 ing["cantidad"] += int(cantidad)
                 self.actualizar_treeview_ingredientes()
+                self.actualizar_treeview_ingredientes_menu()  # Actualizar la lista de ingredientes en Menú
                 return
 
         self.stock.append({"nombre": nombre, "cantidad": int(cantidad)})
         self.actualizar_treeview_ingredientes()
+        self.actualizar_treeview_ingredientes_menu()  # Actualizar la lista de ingredientes en Menú
+
 
     def eliminar_ingrediente(self):
         seleccion = self.treeview_ingredientes.selection()
@@ -130,6 +133,7 @@ class RestauranteApp(ctk.CTk):
         for ing in self.stock:
             self.treeview_ingredientes_menu.insert("", "end", values=(ing["nombre"], ing["cantidad"]))
 
+
     def crear_menu(self):
         nombre = self.entry_nombre_menu.get().strip()
         descripcion = self.entry_descripcion_menu.get().strip()
@@ -173,6 +177,7 @@ class RestauranteApp(ctk.CTk):
         self.actualizar_treeview_menus()
 
         messagebox.showinfo("Éxito", f"Menú '{nombre}' creado correctamente.")
+
 
     def solicitar_cantidad_ing(self, nombre, cantidad_disponible):
         # Ventana emergente para pedir cantidad
@@ -292,29 +297,36 @@ class RestauranteApp(ctk.CTk):
         if not self.pedidos:
             messagebox.showerror("Error", "No hay pedidos para generar una boleta.")
             return
-
-        cliente = self.dropdown_cliente_pedido.get()
-        if not cliente:
-            messagebox.showerror("Error", "Selecciona un cliente.")
-            return
-
+    
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="Boleta de Pedido", ln=True, align="C")
+        pdf.ln(10)  # Salto de línea
 
-        pdf.cell(200, 10, txt="Boleta de Compra", ln=True, align="C")
-        pdf.cell(200, 10, txt=f"Cliente: {cliente}", ln=True, align="L")
+        # Información del cliente y pedido
+        cliente = self.dropdown_cliente_pedido.get()
+        pdf.cell(200, 10, txt=f"Cliente: {cliente}", ln=True)
+        pdf.cell(200, 10, txt=f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True)
+    
+        pdf.ln(10)
 
-        pdf.cell(200, 10, txt="Menús:", ln=True, align="L")
-        total = 0
+        total_pedido = 0
         for pedido in self.pedidos:
-            subtotal = pedido["cantidad"] * pedido["precio"]
-            total += subtotal
-            pdf.cell(200, 10, txt=f"{pedido['menu']} x{pedido['cantidad']} - ${subtotal}", ln=True, align="L")
+            pdf.cell(100, 10, txt=f"{pedido['menu']}", border=1)
+            pdf.cell(50, 10, txt=str(pedido['cantidad']), border=1, align='C')
+            pdf.cell(50, 10, txt=f"${pedido['precio'] * pedido['cantidad']}", border=1, align='R')
+            pdf.ln(10)
+            total_pedido += pedido['precio'] * pedido['cantidad']
+    
+        pdf.ln(10)
+        pdf.cell(200, 10, txt=f"Total: ${total_pedido}", ln=True, align="R")
+    
+        # Guardar archivo PDF
+        filename = f"boleta_{cliente}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        pdf.output(filename)
+        messagebox.showinfo("Éxito", f"Boleta generada: {filename}")
 
-        pdf.cell(200, 10, txt=f"Total: ${total}", ln=True, align="R")
-        pdf.output("boleta.pdf")
-        messagebox.showinfo("Éxito", "Boleta generada correctamente.")
 
 
     # ------------------- GRÁFICOS ------------------- #
