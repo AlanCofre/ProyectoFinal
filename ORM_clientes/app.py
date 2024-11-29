@@ -204,6 +204,7 @@ class RestauranteApp(ctk.CTk):
             self.treeview_menus.insert("", "end", values=(menu["nombre"], menu["descripcion"]))
 
 
+    
     # ------------------- CLIENTES ------------------- #
     def setup_clientes(self):
         frame = ctk.CTkFrame(self.tab_clientes)
@@ -217,8 +218,16 @@ class RestauranteApp(ctk.CTk):
         self.entry_correo_cliente = ctk.CTkEntry(frame)
         self.entry_correo_cliente.pack(pady=5)
 
+        # Botón para registrar cliente
         ctk.CTkButton(frame, text="Registrar Cliente", command=self.registrar_cliente).pack(pady=10)
 
+        # Botón para editar cliente
+        ctk.CTkButton(frame, text="Editar Cliente", command=self.editar_cliente).pack(pady=10)
+
+        # Botón para eliminar cliente
+        ctk.CTkButton(frame, text="Eliminar Cliente", command=self.eliminar_cliente).pack(pady=10)
+
+        # Tabla para mostrar clientes registrados
         self.treeview_clientes = ttk.Treeview(frame, columns=("Nombre", "Correo"), show="headings")
         self.treeview_clientes.heading("Nombre", text="Nombre")
         self.treeview_clientes.heading("Correo", text="Correo")
@@ -239,20 +248,51 @@ class RestauranteApp(ctk.CTk):
 
         self.clientes.append({"nombre": nombre, "correo": correo})
         self.actualizar_treeview_clientes()
-
-        # Verificar que el cliente fue agregado
-        print(f"Clientes: {self.clientes}")  # Verifica si el cliente fue agregado
-
         messagebox.showinfo("Éxito", f"Cliente '{nombre}' registrado correctamente.")
 
+    def editar_cliente(self):
+        seleccion = self.treeview_clientes.selection()
+        if seleccion:
+            cliente_seleccionado = self.treeview_clientes.item(seleccion, "values")
+            nombre_cliente = cliente_seleccionado[0]
+            correo_cliente = cliente_seleccionado[1]
+
+            # Pedir nuevos datos
+            nuevo_nombre = ctk.CTkInputDialog(text="Nuevo nombre del Cliente", title="Editar Cliente")
+            nuevo_nombre.set(text_input=nombre_cliente)  # Establecer el valor inicial para el nombre
+            nuevo_correo = ctk.CTkInputDialog(text="Nuevo correo del Cliente", title="Editar Cliente")
+            nuevo_correo.set(text_input=correo_cliente)  # Establecer el valor inicial para el correo
+
+            # Validar si los nuevos datos son correctos
+            if not nuevo_nombre.get_input().strip() or not nuevo_correo.get_input().strip():
+                messagebox.showerror("Error", "Los campos no pueden estar vacíos.")
+                return
+
+            # Actualizar cliente
+            for cliente in self.clientes:
+                if cliente["correo"] == correo_cliente:
+                    cliente["nombre"] = nuevo_nombre.get_input().strip()
+                    cliente["correo"] = nuevo_correo.get_input().strip()
+
+            self.actualizar_treeview_clientes()
+            messagebox.showinfo("Éxito", "Cliente actualizado correctamente.")
+
+
+    def eliminar_cliente(self):
+        seleccion = self.treeview_clientes.selection()
+        if seleccion:
+            correo_cliente = self.treeview_clientes.item(seleccion, "values")[1]
+            self.clientes = [cliente for cliente in self.clientes if cliente["correo"] != correo_cliente]
+            self.actualizar_treeview_clientes()
+            messagebox.showinfo("Éxito", "Cliente eliminado correctamente.")
+        else:
+            messagebox.showerror("Error", "Por favor, seleccione un cliente para eliminar.")
 
     def actualizar_treeview_clientes(self):
         for item in self.treeview_clientes.get_children():
             self.treeview_clientes.delete(item)
         for cliente in self.clientes:
             self.treeview_clientes.insert("", "end", values=(cliente["nombre"], cliente["correo"]))
-
-
 
   
     # ------------------- PEDIDOS ------------------- #
@@ -366,13 +406,13 @@ class RestauranteApp(ctk.CTk):
 
         messagebox.showinfo("Éxito", f"Boleta generada: {nombre_archivo}")
 
-    # ------------------- GRÁFICOS ------------------- #
+    # ------------------- GRÁFICOS ------------------- # 
     def setup_graficos(self):
         frame = ctk.CTkFrame(self.tab_graficos)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         ctk.CTkLabel(frame, text="Selecciona un tipo de gráfico").pack(pady=10)
-        self.dropdown_graficos = ctk.CTkComboBox(frame, values=["Ventas por Menú", "Ingredientes Usados"])
+        self.dropdown_graficos = ctk.CTkComboBox(frame, values=["Ventas por Menú", "Ingredientes Usados", "Ventas por Día"])
         self.dropdown_graficos.pack(pady=10)
 
         ctk.CTkButton(frame, text="Generar Gráfico", command=self.mostrar_grafico).pack(pady=10)
@@ -384,6 +424,8 @@ class RestauranteApp(ctk.CTk):
             self.graficar_ventas_por_menu()
         elif grafico_seleccionado == "Ingredientes Usados":
             self.graficar_ingredientes_usados()
+        elif grafico_seleccionado == "Ventas por Día":
+            self.graficar_ventas_por_dia()
         else:
             messagebox.showerror("Error", "Selecciona un tipo de gráfico.")
 
@@ -408,6 +450,26 @@ class RestauranteApp(ctk.CTk):
         plt.pie(cantidades, labels=ingredientes, autopct="%1.1f%%")
         plt.title("Distribución de Ingredientes Usados")
         plt.show()
+
+    def graficar_ventas_por_dia(self):
+        import matplotlib.pyplot as plt
+        from collections import Counter
+
+        # Suponiendo que los pedidos tienen la fecha en formato 'YYYY-MM-DD'
+        fechas = [pedido["fecha"] for pedido in self.pedidos]
+        contador_fechas = Counter(fechas)
+
+        dias = list(contador_fechas.keys())
+        ventas = list(contador_fechas.values())
+
+        plt.plot(dias, ventas, marker='o', color='green')
+        plt.title("Ventas por Día")
+        plt.xlabel("Fecha")
+        plt.ylabel("Cantidad de Ventas")
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()  # Ajusta los márgenes para que no se corten las etiquetas
+        plt.show()
+
 
 if __name__ == "__main__":
     app = RestauranteApp()
