@@ -1,258 +1,365 @@
 import customtkinter as ctk
-from tkinter import ttk
+from tkinter import ttk, messagebox
+from PIL import Image, ImageTk
+from fpdf import FPDF
+import os
+from datetime import datetime
 
-# Configuración de la ventana principal
-ctk.set_appearance_mode("System")
-ctk.set_default_color_theme("dark-blue")
-
-
-class App(ctk.CTk):
+class RestauranteApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Gestión de Ingredientes y Pedidos")
-        self.geometry("750x600")
+        self.title("Gestión de Restaurante")
+        self.geometry("900x700")
 
-        self.pedido_id_counter = 1  # Contador para IDs de pedidos
-        self.menu_dict = {}  # Diccionario para llevar el conteo de menús agregados
+        self.stock = []  # Lista para ingredientes
+        self.menus = []  # Lista para menús
+        self.clientes = []  # Lista para clientes
+        self.pedidos = []  # Lista para pedidos
+        self.total = 0  # Total acumulado en pedidos actuales
 
-        # Crear el Tabview (pestañas)
-        self.tabview = ctk.CTkTabview(self)
-        self.tabview.pack(pady=20, padx=20, fill="both", expand=True)
+        # Crear y configurar pestañas
+        self.tabs = ctk.CTkTabview(self)
+        self.tabs.pack(expand=True, fill="both")
 
-        # Pestañas
-        self.tab_ingredientes = self.tabview.add("Ingredientes")
-        self.crear_formulario_ingrediente(self.tab_ingredientes)
+        self.tab_ingreso_ingredientes = self.tabs.add("Ingredientes")
+        self.tab_menus = self.tabs.add("Menús")
+        self.tab_clientes = self.tabs.add("Clientes")
+        self.tab_pedido = self.tabs.add("Pedidos")
+        self.tab_graficos = self.tabs.add("Gráficos")
 
-        self.tab_menu = self.tabview.add("Menú")
-        self.crear_formulario_menu(self.tab_menu)
+        self.setup_ingreso_ingredientes()
+        self.setup_menus()
+        self.setup_clientes()
+        self.setup_pedido()
+        self.setup_graficos()
 
-        self.tab_clientes = self.tabview.add("Clientes")
-        self.crear_formulario_cliente(self.tab_clientes)
+    # ------------------- INGREDIENTES ------------------- #
+    def setup_ingreso_ingredientes(self):
+        frame = ctk.CTkFrame(self.tab_ingreso_ingredientes)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        self.tab_panel_compra = self.tabview.add("Panel de Compra")
-        self.crear_formulario_panel_compra(self.tab_panel_compra)
+        # Entrada de datos
+        ctk.CTkLabel(frame, text="Nombre del Ingrediente").pack(pady=5)
+        self.entry_nombre_ingrediente = ctk.CTkEntry(frame)
+        self.entry_nombre_ingrediente.pack(pady=5)
 
-        self.tab_pedidos = self.tabview.add("Pedidos")
-        self.crear_formulario_pedido(self.tab_pedidos)
+        ctk.CTkLabel(frame, text="Cantidad").pack(pady=5)
+        self.entry_cantidad_ingrediente = ctk.CTkEntry(frame)
+        self.entry_cantidad_ingrediente.pack(pady=5)
 
-        self.tab_graficos = self.tabview.add("Gráficos")
-        self.crear_dropdown_graficos(self.tab_graficos)
+        # Botones
+        ctk.CTkButton(frame, text="Agregar Ingrediente", command=self.agregar_ingrediente).pack(pady=10)
+        ctk.CTkButton(frame, text="Eliminar Ingrediente", command=self.eliminar_ingrediente).pack(pady=10)
 
-    def crear_formulario_menu(self, parent):
-        frame_superior = ctk.CTkFrame(parent)
-        frame_superior.pack(pady=10, padx=10, fill="x")
+        # Tabla de ingredientes
+        self.treeview_ingredientes = ttk.Treeview(frame, columns=("Nombre", "Cantidad"), show="headings")
+        self.treeview_ingredientes.heading("Nombre", text="Nombre")
+        self.treeview_ingredientes.heading("Cantidad", text="Cantidad")
+        self.treeview_ingredientes.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Campos de texto
-        ctk.CTkLabel(frame_superior, text="Nombre del Menú").grid(row=0, column=0, pady=10, padx=10, sticky="w")
-        self.entry_nombre_menu = ctk.CTkEntry(frame_superior)
-        self.entry_nombre_menu.grid(row=0, column=1, pady=10, padx=10, sticky="w")
+    def agregar_ingrediente(self):
+        nombre = self.entry_nombre_ingrediente.get().strip()
+        cantidad = self.entry_cantidad_ingrediente.get().strip()
 
-        ctk.CTkLabel(frame_superior, text="Descripción").grid(row=0, column=2, pady=10, padx=10, sticky="w")
-        self.entry_descripcion_menu = ctk.CTkEntry(frame_superior)
-        self.entry_descripcion_menu.grid(row=0, column=3, pady=10, padx=10, sticky="w")
+        if not nombre or not cantidad.isdigit() or int(cantidad) <= 0:
+            messagebox.showerror("Error", "Datos inválidos.")
+            return
 
-        # Botón alineado a la izquierda
-        self.btn_crear_menu = ctk.CTkButton(frame_superior, text="Crear Menú", command=self.crear_menu)
-        self.btn_crear_menu.grid(row=1, column=0, columnspan=4, pady=10, sticky="w")
+        for ing in self.stock:
+            if ing["nombre"] == nombre:
+                ing["cantidad"] += int(cantidad)
+                self.actualizar_treeview_ingredientes()
+                return
 
-        # Tabla
-        frame_inferior = ctk.CTkFrame(parent)
-        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
+        self.stock.append({"nombre": nombre, "cantidad": int(cantidad)})
+        self.actualizar_treeview_ingredientes()
 
-        self.treeview_menu = ttk.Treeview(frame_inferior, columns=("Nombre", "Descripción"), show="headings")
-        self.treeview_menu.heading("Nombre", text="Nombre")
-        self.treeview_menu.heading("Descripción", text="Descripción")
-        self.treeview_menu.pack(pady=10, padx=10, fill="both", expand=True)
+    def eliminar_ingrediente(self):
+        seleccion = self.treeview_ingredientes.selection()
+        if seleccion:
+            nombre = self.treeview_ingredientes.item(seleccion, "values")[0]
+            self.stock = [ing for ing in self.stock if ing["nombre"] != nombre]
+            self.actualizar_treeview_ingredientes()
+
+    def actualizar_treeview_ingredientes(self):
+        for item in self.treeview_ingredientes.get_children():
+            self.treeview_ingredientes.delete(item)
+        for ing in self.stock:
+            self.treeview_ingredientes.insert("", "end", values=(ing["nombre"], ing["cantidad"]))
+
+        # ------------------- MENÚS ------------------- #
+    def setup_menus(self):
+        frame = ctk.CTkFrame(self.tab_menus)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Entrada para nombre y descripción del menú
+        ctk.CTkLabel(frame, text="Nombre del Menú").pack(pady=5)
+        self.entry_nombre_menu = ctk.CTkEntry(frame)
+        self.entry_nombre_menu.pack(pady=5)
+
+        ctk.CTkLabel(frame, text="Descripción del Menú").pack(pady=5)
+        self.entry_descripcion_menu = ctk.CTkEntry(frame)
+        self.entry_descripcion_menu.pack(pady=5)
+
+        # Tabla para seleccionar ingredientes
+        ctk.CTkLabel(frame, text="Seleccionar Ingredientes").pack(pady=5)
+        self.treeview_ingredientes_menu = ttk.Treeview(frame, columns=("Nombre", "Cantidad"), show="headings")
+        self.treeview_ingredientes_menu.heading("Nombre", text="Nombre")
+        self.treeview_ingredientes_menu.heading("Cantidad", text="Cantidad")
+        self.treeview_ingredientes_menu.pack(fill="both", expand=True, padx=10, pady=10)
+
+        self.actualizar_treeview_ingredientes_menu()
+
+        # Botón para agregar el menú
+        ctk.CTkButton(frame, text="Crear Menú", command=self.crear_menu).pack(pady=10)
+
+        # Tabla para mostrar menús creados
+        ctk.CTkLabel(frame, text="Menús Creados").pack(pady=5)
+        self.treeview_menus = ttk.Treeview(frame, columns=("Nombre", "Descripción"), show="headings")
+        self.treeview_menus.heading("Nombre", text="Nombre")
+        self.treeview_menus.heading("Descripción", text="Descripción")
+        self.treeview_menus.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def actualizar_treeview_ingredientes_menu(self):
+        # Limpiar la tabla de ingredientes
+        for item in self.treeview_ingredientes_menu.get_children():
+            self.treeview_ingredientes_menu.delete(item)
+
+        # Mostrar los ingredientes disponibles
+        for ing in self.stock:
+            self.treeview_ingredientes_menu.insert("", "end", values=(ing["nombre"], ing["cantidad"]))
 
     def crear_menu(self):
-        # Lógica para crear un menú
-        nombre_menu = self.entry_nombre_menu.get()
-        descripcion_menu = self.entry_descripcion_menu.get()
-        if nombre_menu and descripcion_menu:
-            self.treeview_menu.insert("", "end", values=(nombre_menu, descripcion_menu))
-            print(f"Menú {nombre_menu} creado.")
-        else:
-            print("Error: Completa todos los campos para crear el menú.")
+        nombre = self.entry_nombre_menu.get().strip()
+        descripcion = self.entry_descripcion_menu.get().strip()
 
-    def crear_formulario_panel_compra(self, parent):
-        frame_superior = ctk.CTkFrame(parent)
-        frame_superior.pack(pady=10, padx=10, fill="x")
+        if not nombre or not descripcion:
+            messagebox.showerror("Error", "Debe llenar todos los campos.")
+            return
 
-        ctk.CTkLabel(frame_superior, text="Menú").grid(row=0, column=0, pady=10, padx=10, sticky="w")
-        self.dropdown_menu = ctk.CTkComboBox(frame_superior, state="normal", values=[])
-        self.dropdown_menu.grid(row=0, column=1, pady=10, padx=10, sticky="w")
+        # Obtener los ingredientes seleccionados
+        seleccionados = self.treeview_ingredientes_menu.selection()
+        if not seleccionados:
+            messagebox.showerror("Error", "Debe seleccionar al menos un ingrediente.")
+            return
 
-        # Botón alineado a la izquierda
-        self.btn_agregar_compra = ctk.CTkButton(frame_superior, text="Agregar a la compra", command=self.agregar_a_compra)
-        self.btn_agregar_compra.grid(row=1, column=0, columnspan=1, pady=10, padx=10, sticky="w")
+        ingredientes_menu = []
+        for item in seleccionados:
+            nombre_ing = self.treeview_ingredientes_menu.item(item, "values")[0]
+            cantidad_ing = self.treeview_ingredientes_menu.item(item, "values")[1]
 
-        frame_inferior = ctk.CTkFrame(parent)
-        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
+            # Solicitar cantidad a usar
+            cantidad_a_usar = self.solicitar_cantidad_ing(nombre_ing, cantidad_ing)
+            if cantidad_a_usar is None:
+                return  # El usuario canceló la entrada
 
-        self.treeview_compra = ttk.Treeview(frame_inferior, columns=("Menú", "Cantidad"), show="headings")
-        self.treeview_compra.heading("Menú", text="Menú")
-        self.treeview_compra.heading("Cantidad", text="Cantidad")
-        self.treeview_compra.pack(pady=10, padx=10, fill="both", expand=True)
+            # Validar cantidad
+            if cantidad_a_usar > int(cantidad_ing):
+                messagebox.showerror("Error", f"No hay suficiente {nombre_ing}.")
+                return
 
-        self.btn_generar_boleta = ctk.CTkButton(parent, text="Generar Boleta", command=self.generar_boleta)
-        self.btn_generar_boleta.pack(pady=10, padx=10)
+            ingredientes_menu.append({"nombre": nombre_ing, "cantidad": cantidad_a_usar})
 
-    def agregar_a_compra(self):
-        menu_seleccionado = self.dropdown_menu.get()
-        if menu_seleccionado:
-            if menu_seleccionado in self.menu_dict:
-                self.menu_dict[menu_seleccionado] += 1
-            else:
-                self.menu_dict[menu_seleccionado] = 1
-            self.actualizar_tabla_compra()
+        # Reducir cantidades en el inventario
+        for ingrediente in ingredientes_menu:
+            for ing in self.stock:
+                if ing["nombre"] == ingrediente["nombre"]:
+                    ing["cantidad"] -= ingrediente["cantidad"]
 
-    def actualizar_tabla_compra(self):
-        for item in self.treeview_compra.get_children():
-            self.treeview_compra.delete(item)
-        for menu, cantidad in self.menu_dict.items():
-            self.treeview_compra.insert("", "end", values=(menu, cantidad))
+        # Crear el menú
+        self.menus.append({"nombre": nombre, "descripcion": descripcion, "ingredientes": ingredientes_menu})
+        self.actualizar_treeview_ingredientes_menu()
+        self.actualizar_treeview_menus()
+
+        messagebox.showinfo("Éxito", f"Menú '{nombre}' creado correctamente.")
+
+    def solicitar_cantidad_ing(self, nombre, cantidad_disponible):
+        # Ventana emergente para pedir cantidad
+        cantidad = ctk.CTkInputDialog(
+            text=f"Ingrese la cantidad de '{nombre}' (Disponible: {cantidad_disponible})",
+            title="Cantidad de Ingrediente"
+        )
+        try:
+            cantidad_ingresada = int(cantidad.get_input().strip())
+            if cantidad_ingresada <= 0:
+                raise ValueError("Cantidad no válida.")
+            return cantidad_ingresada
+        except (ValueError, TypeError):
+            messagebox.showerror("Error", "Cantidad ingresada no válida.")
+            return None
+
+    def actualizar_treeview_menus(self):
+        for item in self.treeview_menus.get_children():
+            self.treeview_menus.delete(item)
+        for menu in self.menus:
+            self.treeview_menus.insert("", "end", values=(menu["nombre"], menu["descripcion"]))
+
+    # ------------------- CLIENTES ------------------- #
+    def setup_clientes(self):
+        frame = ctk.CTkFrame(self.tab_clientes)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Nombre del Cliente").pack(pady=5)
+        self.entry_nombre_cliente = ctk.CTkEntry(frame)
+        self.entry_nombre_cliente.pack(pady=5)
+
+        ctk.CTkLabel(frame, text="Correo del Cliente").pack(pady=5)
+        self.entry_correo_cliente = ctk.CTkEntry(frame)
+        self.entry_correo_cliente.pack(pady=5)
+
+        ctk.CTkButton(frame, text="Registrar Cliente", command=self.registrar_cliente).pack(pady=10)
+
+        self.treeview_clientes = ttk.Treeview(frame, columns=("Nombre", "Correo"), show="headings")
+        self.treeview_clientes.heading("Nombre", text="Nombre")
+        self.treeview_clientes.heading("Correo", text="Correo")
+        self.treeview_clientes.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def registrar_cliente(self):
+        nombre = self.entry_nombre_cliente.get().strip()
+        correo = self.entry_correo_cliente.get().strip()
+
+        if not nombre or not correo:
+            messagebox.showerror("Error", "Todos los campos son obligatorios.")
+            return
+
+        for cliente in self.clientes:
+            if cliente["correo"] == correo:
+                messagebox.showerror("Error", "El correo ya está registrado.")
+                return
+
+        self.clientes.append({"nombre": nombre, "correo": correo})
+        self.actualizar_treeview_clientes()
+
+    def actualizar_treeview_clientes(self):
+        for item in self.treeview_clientes.get_children():
+            self.treeview_clientes.delete(item)
+        for cliente in self.clientes:
+            self.treeview_clientes.insert("", "end", values=(cliente["nombre"], cliente["correo"]))
+
+    # ------------------- PEDIDOS ------------------- #
+    def setup_pedido(self):
+        frame = ctk.CTkFrame(self.tab_pedido)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Dropdown para seleccionar cliente
+        ctk.CTkLabel(frame, text="Cliente").pack(pady=5)
+        self.dropdown_cliente_pedido = ctk.CTkComboBox(frame, values=[c["nombre"] for c in self.clientes])
+        self.dropdown_cliente_pedido.pack(pady=5)
+
+        # Dropdown para seleccionar menú
+        ctk.CTkLabel(frame, text="Menú").pack(pady=5)
+        self.dropdown_menu_pedido = ctk.CTkComboBox(frame, values=[m["nombre"] for m in self.menus])
+        self.dropdown_menu_pedido.pack(pady=5)
+
+        # Botones para agregar menús al pedido
+        ctk.CTkButton(frame, text="Agregar al Pedido", command=self.agregar_al_pedido).pack(pady=10)
+
+        # Tabla para mostrar el pedido
+        self.treeview_pedido = ttk.Treeview(frame, columns=("Menú", "Cantidad", "Precio"), show="headings")
+        self.treeview_pedido.heading("Menú", text="Menú")
+        self.treeview_pedido.heading("Cantidad", text="Cantidad")
+        self.treeview_pedido.heading("Precio", text="Precio")
+        self.treeview_pedido.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Botón para generar boleta
+        ctk.CTkButton(frame, text="Generar Boleta", command=self.generar_boleta).pack(pady=10)
+
+    def agregar_al_pedido(self):
+        menu_seleccionado = self.dropdown_menu_pedido.get()
+        if not menu_seleccionado:
+            messagebox.showerror("Error", "Selecciona un menú para agregar al pedido.")
+            return
+
+        for menu in self.menus:
+            if menu["nombre"] == menu_seleccionado:
+                for item in self.pedidos:
+                    if item["menu"] == menu_seleccionado:
+                        item["cantidad"] += 1
+                        self.actualizar_treeview_pedido()
+                        return
+                self.pedidos.append({"menu": menu_seleccionado, "cantidad": 1, "precio": 500})  # Precio fijo por ejemplo
+                self.actualizar_treeview_pedido()
+                return
+
+    def actualizar_treeview_pedido(self):
+        for item in self.treeview_pedido.get_children():
+            self.treeview_pedido.delete(item)
+        for pedido in self.pedidos:
+            self.treeview_pedido.insert("", "end", values=(pedido["menu"], pedido["cantidad"], f"${pedido['cantidad'] * pedido['precio']}"))
 
     def generar_boleta(self):
-        print("Boleta generada.")
+        if not self.pedidos:
+            messagebox.showerror("Error", "No hay pedidos para generar una boleta.")
+            return
 
-    def crear_formulario_ingrediente(self, parent):
-        frame_superior = ctk.CTkFrame(parent)
-        frame_superior.pack(pady=10, padx=10, fill="x")
+        cliente = self.dropdown_cliente_pedido.get()
+        if not cliente:
+            messagebox.showerror("Error", "Selecciona un cliente.")
+            return
 
-        ctk.CTkLabel(frame_superior, text="Nombre").grid(row=0, column=0, pady=10, padx=10, sticky="w")
-        self.entry_nombre_ingrediente = ctk.CTkEntry(frame_superior)
-        self.entry_nombre_ingrediente.grid(row=0, column=1, pady=10, padx=10, sticky="w")
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
 
-        ctk.CTkLabel(frame_superior, text="Tipo").grid(row=0, column=2, pady=10, padx=10, sticky="w")
-        self.entry_tipo_ingrediente = ctk.CTkEntry(frame_superior)
-        self.entry_tipo_ingrediente.grid(row=0, column=3, pady=10, padx=10, sticky="w")
+        pdf.cell(200, 10, txt="Boleta de Compra", ln=True, align="C")
+        pdf.cell(200, 10, txt=f"Cliente: {cliente}", ln=True, align="L")
 
-        # Botón alineado a la izquierda
-        self.btn_crear_ingrediente = ctk.CTkButton(frame_superior, text="Crear Ingrediente", command=self.crear_ingrediente)
-        self.btn_crear_ingrediente.grid(row=1, column=0, columnspan=4, pady=10, sticky="w")
+        pdf.cell(200, 10, txt="Menús:", ln=True, align="L")
+        total = 0
+        for pedido in self.pedidos:
+            subtotal = pedido["cantidad"] * pedido["precio"]
+            total += subtotal
+            pdf.cell(200, 10, txt=f"{pedido['menu']} x{pedido['cantidad']} - ${subtotal}", ln=True, align="L")
 
-        frame_inferior = ctk.CTkFrame(parent)
-        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
+        pdf.cell(200, 10, txt=f"Total: ${total}", ln=True, align="R")
+        pdf.output("boleta.pdf")
+        messagebox.showinfo("Éxito", "Boleta generada correctamente.")
 
-        self.treeview_ingredientes = ttk.Treeview(frame_inferior, columns=("Nombre", "Tipo"), show="headings")
-        self.treeview_ingredientes.heading("Nombre", text="Nombre")
-        self.treeview_ingredientes.heading("Tipo", text="Tipo")
-        self.treeview_ingredientes.pack(pady=10, padx=10, fill="both", expand=True)
 
-    def crear_ingrediente(self):
-        # Lógica para crear un ingrediente
-        nombre_ingrediente = self.entry_nombre_ingrediente.get()
-        tipo_ingrediente = self.entry_tipo_ingrediente.get()
-        if nombre_ingrediente and tipo_ingrediente:
-            self.treeview_ingredientes.insert("", "end", values=(nombre_ingrediente, tipo_ingrediente))
-            print(f"Ingrediente {nombre_ingrediente} creado.")
+    # ------------------- GRÁFICOS ------------------- #
+    def setup_graficos(self):
+        frame = ctk.CTkFrame(self.tab_graficos)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Selecciona un tipo de gráfico").pack(pady=10)
+        self.dropdown_graficos = ctk.CTkComboBox(frame, values=["Ventas por Menú", "Ingredientes Usados"])
+        self.dropdown_graficos.pack(pady=10)
+
+        ctk.CTkButton(frame, text="Generar Gráfico", command=self.mostrar_grafico).pack(pady=10)
+
+    def mostrar_grafico(self):
+        grafico_seleccionado = self.dropdown_graficos.get()
+
+        if grafico_seleccionado == "Ventas por Menú":
+            self.graficar_ventas_por_menu()
+        elif grafico_seleccionado == "Ingredientes Usados":
+            self.graficar_ingredientes_usados()
         else:
-            print("Error: Completa todos los campos para crear el ingrediente.")
+            messagebox.showerror("Error", "Selecciona un tipo de gráfico.")
 
-    def crear_formulario_cliente(self, parent):
-        frame_superior = ctk.CTkFrame(parent)
-        frame_superior.pack(pady=10, padx=10, fill="x")
+    def graficar_ventas_por_menu(self):
+        import matplotlib.pyplot as plt
 
-        ctk.CTkLabel(frame_superior, text="Nombre").grid(row=0, column=0, pady=10, padx=10, sticky="w")
-        self.entry_nombre = ctk.CTkEntry(frame_superior)
-        self.entry_nombre.grid(row=0, column=1, pady=10, padx=10, sticky="w")
+        menus = [pedido["menu"] for pedido in self.pedidos]
+        cantidades = [pedido["cantidad"] for pedido in self.pedidos]
 
-        ctk.CTkLabel(frame_superior, text="Email").grid(row=0, column=2, pady=10, padx=10, sticky="w")
-        self.entry_email = ctk.CTkEntry(frame_superior)
-        self.entry_email.grid(row=0, column=3, pady=10, padx=10, sticky="w")
+        plt.bar(menus, cantidades, color='blue')
+        plt.title("Ventas por Menú")
+        plt.xlabel("Menús")
+        plt.ylabel("Cantidad Vendida")
+        plt.show()
 
-        # Botones de crear y editar cliente alineados a la izquierda
-        self.btn_crear_cliente = ctk.CTkButton(frame_superior, text="Crear Cliente", command=self.crear_cliente)
-        self.btn_crear_cliente.grid(row=1, column=0, columnspan=1, pady=10, padx=10, sticky="w")
+    def graficar_ingredientes_usados(self):
+        import matplotlib.pyplot as plt
 
-        # Botón "Editar Cliente" alineado a la derecha
-        self.btn_editar_cliente = ctk.CTkButton(frame_superior, text="Editar Cliente", command=self.editar_cliente)
-        self.btn_editar_cliente.grid(row=1, column=1, pady=10, padx=10, sticky="e")
+        ingredientes = [ing["nombre"] for ing in self.stock]
+        cantidades = [ing["cantidad"] for ing in self.stock]
 
-        frame_inferior = ctk.CTkFrame(parent)
-        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
-
-        self.treeview_clientes = ttk.Treeview(frame_inferior, columns=("Nombre", "Email"), show="headings")
-        self.treeview_clientes.heading("Nombre", text="Nombre")
-        self.treeview_clientes.heading("Email", text="Email")
-        self.treeview_clientes.pack(pady=10, padx=10, fill="both", expand=True)
-
-    def crear_cliente(self):
-        # Lógica para crear un cliente
-        nombre = self.entry_nombre.get()
-        email = self.entry_email.get()
-        if nombre and email:
-            self.treeview_clientes.insert("", "end", values=(nombre, email))
-            print(f"Cliente {nombre} creado.")
-        else:
-            print("Error: Completa todos los campos para crear el cliente.")
-
-    def editar_cliente(self):
-        # Obtener la selección de la tabla
-        selected_item = self.treeview_clientes.selection()
-        if selected_item:
-            # Obtener los datos del cliente seleccionado
-            cliente = self.treeview_clientes.item(selected_item[0], "values")
-            nombre, email = cliente[0], cliente[1]
-            
-            # Poner los datos en los campos de texto para su edición
-            self.entry_nombre.delete(0, "end")
-            self.entry_nombre.insert(0, nombre)
-            self.entry_email.delete(0, "end")
-            self.entry_email.insert(0, email)
-
-            print(f"Cliente seleccionado para editar: {nombre}, {email}")
-        else:
-            print("Error: No se seleccionó ningún cliente.")
-
-    def crear_formulario_pedido(self, parent):
-        frame_superior = ctk.CTkFrame(parent)
-        frame_superior.pack(pady=10, padx=10, fill="x")
-
-        ctk.CTkLabel(frame_superior, text="ID Pedido").grid(row=0, column=0, pady=10, padx=10, sticky="w")
-        self.entry_id_pedido = ctk.CTkEntry(frame_superior)
-        self.entry_id_pedido.grid(row=0, column=1, pady=10, padx=10, sticky="w")
-
-        # Botón alineado a la izquierda
-        self.btn_crear_pedido = ctk.CTkButton(frame_superior, text="Crear Pedido", command=self.crear_pedido)
-        self.btn_crear_pedido.grid(row=1, column=0, columnspan=1, pady=10, padx=10, sticky="w")
-
-        frame_inferior = ctk.CTkFrame(parent)
-        frame_inferior.pack(pady=10, padx=10, fill="both", expand=True)
-
-        self.treeview_pedidos = ttk.Treeview(frame_inferior, columns=("ID Pedido", "Estado"), show="headings")
-        self.treeview_pedidos.heading("ID Pedido", text="ID Pedido")
-        self.treeview_pedidos.heading("Estado", text="Estado")
-        self.treeview_pedidos.pack(pady=10, padx=10, fill="both", expand=True)
-
-    def crear_pedido(self):
-        id_pedido = self.entry_id_pedido.get()
-        if id_pedido:
-            self.treeview_pedidos.insert("", "end", values=(id_pedido, "Pendiente"))
-            self.entry_id_pedido.delete(0, "end")
-            print(f"Pedido {id_pedido} creado.")
-        else:
-            print("Error: Completa todos los campos para crear el pedido.")
-
-    def crear_dropdown_graficos(self, parent):
-        frame_graficos = ctk.CTkFrame(parent)
-        frame_graficos.pack(pady=10, padx=10, fill="x")
-
-        ctk.CTkLabel(frame_graficos, text="Selecciona un gráfico").grid(row=0, column=0, pady=10, padx=10)
-
-        self.dropdown_graficos = ctk.CTkComboBox(frame_graficos, state="normal", values=["Opción 1", "Opción 2", "Opción 3"])
-        self.dropdown_graficos.grid(row=0, column=1, pady=10, padx=10)
-
-        # Botón alineado a la izquierda
-        self.btn_seleccionar_grafico = ctk.CTkButton(frame_graficos, text="Seleccionar Gráfico", command=self.seleccionar_grafico)
-        self.btn_seleccionar_grafico.grid(row=0, column=2, pady=10, sticky="w")
-
-    def seleccionar_grafico(self):
-        opcion_seleccionada = self.dropdown_graficos.get()
-        print(f"Gráfico seleccionado: {opcion_seleccionada}")
-
+        plt.pie(cantidades, labels=ingredientes, autopct="%1.1f%%")
+        plt.title("Distribución de Ingredientes Usados")
+        plt.show()
 
 if __name__ == "__main__":
-    app = App()
+    app = RestauranteApp()
     app.mainloop()
