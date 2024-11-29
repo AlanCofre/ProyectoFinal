@@ -91,7 +91,7 @@ class RestauranteApp(ctk.CTk):
         for ing in self.stock:
             self.treeview_ingredientes.insert("", "end", values=(ing["nombre"], ing["cantidad"]))
 
-        # ------------------- MENÚS ------------------- #
+       # ------------------- MENÚS ------------------- #
     def setup_menus(self):
         frame = ctk.CTkFrame(self.tab_menus)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -105,6 +105,12 @@ class RestauranteApp(ctk.CTk):
         self.entry_descripcion_menu = ctk.CTkEntry(frame)
         self.entry_descripcion_menu.pack(pady=5)
 
+        # Entrada para el precio del menú
+        ctk.CTkLabel(frame, text="Precio del Menú").pack(pady=5)
+        self.entry_precio_menu = ctk.CTkEntry(frame)
+        self.entry_precio_menu.pack(pady=5)
+
+
         # Tabla para seleccionar ingredientes
         ctk.CTkLabel(frame, text="Seleccionar Ingredientes").pack(pady=5)
         self.treeview_ingredientes_menu = ttk.Treeview(frame, columns=("Nombre", "Cantidad"), show="headings")
@@ -117,11 +123,12 @@ class RestauranteApp(ctk.CTk):
         # Botón para agregar el menú
         ctk.CTkButton(frame, text="Crear Menú", command=self.crear_menu).pack(pady=10)
 
-        # Tabla para mostrar menús creados
+        # Tabla para mostrar menús creados (agregamos la columna de precio)
         ctk.CTkLabel(frame, text="Menús Creados").pack(pady=5)
-        self.treeview_menus = ttk.Treeview(frame, columns=("Nombre", "Descripción"), show="headings")
+        self.treeview_menus = ttk.Treeview(frame, columns=("Nombre", "Descripción", "Precio"), show="headings")
         self.treeview_menus.heading("Nombre", text="Nombre")
         self.treeview_menus.heading("Descripción", text="Descripción")
+        self.treeview_menus.heading("Precio", text="Precio")
         self.treeview_menus.pack(fill="both", expand=True, padx=10, pady=10)
 
     def actualizar_treeview_ingredientes_menu(self):
@@ -137,9 +144,19 @@ class RestauranteApp(ctk.CTk):
     def crear_menu(self):
         nombre = self.entry_nombre_menu.get().strip()
         descripcion = self.entry_descripcion_menu.get().strip()
+        precio = self.entry_precio_menu.get().strip()
 
-        if not nombre or not descripcion:
+        if not nombre or not descripcion or not precio:
             messagebox.showerror("Error", "Debe llenar todos los campos.")
+            return
+
+        # Verificar que el precio sea un número válido
+        try:
+            precio = float(precio)
+            if precio <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Error", "Precio inválido.")
             return
 
         # Obtener los ingredientes seleccionados
@@ -172,7 +189,7 @@ class RestauranteApp(ctk.CTk):
                     ing["cantidad"] -= ingrediente["cantidad"]
 
         # Crear el menú
-        self.menus.append({"nombre": nombre, "descripcion": descripcion, "ingredientes": ingredientes_menu})
+        self.menus.append({"nombre": nombre, "descripcion": descripcion, "precio": precio, "ingredientes": ingredientes_menu})
         self.actualizar_treeview_ingredientes_menu()
         self.actualizar_treeview_menus()
 
@@ -181,26 +198,12 @@ class RestauranteApp(ctk.CTk):
 
         messagebox.showinfo("Éxito", f"Menú '{nombre}' creado correctamente.")
 
-    def solicitar_cantidad_ing(self, nombre, cantidad_disponible):
-        # Ventana emergente para pedir cantidad
-        cantidad = ctk.CTkInputDialog(
-            text=f"Ingrese la cantidad de '{nombre}' (Disponible: {cantidad_disponible})",
-            title="Cantidad de Ingrediente"
-        )
-        try:
-            cantidad_ingresada = int(cantidad.get_input().strip())
-            if cantidad_ingresada <= 0:
-                raise ValueError("Cantidad no válida.")
-            return cantidad_ingresada
-        except (ValueError, TypeError):
-            messagebox.showerror("Error", "Cantidad ingresada no válida.")
-            return None
 
     def actualizar_treeview_menus(self):
         for item in self.treeview_menus.get_children():
             self.treeview_menus.delete(item)
         for menu in self.menus:
-            self.treeview_menus.insert("", "end", values=(menu["nombre"], menu["descripcion"]))
+            self.treeview_menus.insert("", "end", values=(menu["nombre"], menu["descripcion"], f"${menu['precio']:.2f}"))
 
 
     # ------------------- CLIENTES ------------------- #
