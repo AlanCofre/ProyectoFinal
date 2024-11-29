@@ -4,22 +4,22 @@ from PIL import Image, ImageTk
 from fpdf import FPDF
 import os
 from datetime import datetime
-from graficos import GeneradorGraficos
+
 
 class RestauranteApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         self.title("Gestión de Restaurante")
-        self.geometry("900x700")
+        self.geometry("1280x720")
 
-        self.stock = []
-        self.menus = []
-        self.clientes = []
-        self.pedidos = []
-        self.total = 0
+        self.stock = []  # Lista para ingredientes
+        self.menus = []  # Lista para menús
+        self.clientes = []  # Lista para clientes
+        self.pedidos = []  # Lista para pedidos
+        self.total = 0  # Total acumulado en pedidos actuales
 
-        # Crear pestañas
+        # Crear y configurar pestañas
         self.tabs = ctk.CTkTabview(self)
         self.tabs.pack(expand=True, fill="both")
 
@@ -32,10 +32,9 @@ class RestauranteApp(ctk.CTk):
         self.setup_ingreso_ingredientes()
         self.setup_menus()
         self.setup_clientes()
-        self.setup_pedido()
+        self.setup_pedido()  
+        self.setup_graficos()
 
-        # Configurar la pestaña de gráficos usando GeneradorGraficos
-        self.generador_graficos = GeneradorGraficos(self.tab_graficos)
     # ------------------- INGREDIENTES ------------------- #
     def setup_ingreso_ingredientes(self):
         frame = ctk.CTkFrame(self.tab_ingreso_ingredientes)
@@ -366,6 +365,49 @@ class RestauranteApp(ctk.CTk):
         pdf.output(nombre_archivo)
 
         messagebox.showinfo("Éxito", f"Boleta generada: {nombre_archivo}")
+
+    # ------------------- GRÁFICOS ------------------- #
+    def setup_graficos(self):
+        frame = ctk.CTkFrame(self.tab_graficos)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Selecciona un tipo de gráfico").pack(pady=10)
+        self.dropdown_graficos = ctk.CTkComboBox(frame, values=["Ventas por Menú", "Ingredientes Usados"])
+        self.dropdown_graficos.pack(pady=10)
+
+        ctk.CTkButton(frame, text="Generar Gráfico", command=self.mostrar_grafico).pack(pady=10)
+
+    def mostrar_grafico(self):
+        grafico_seleccionado = self.dropdown_graficos.get()
+
+        if grafico_seleccionado == "Ventas por Menú":
+            self.graficar_ventas_por_menu()
+        elif grafico_seleccionado == "Ingredientes Usados":
+            self.graficar_ingredientes_usados()
+        else:
+            messagebox.showerror("Error", "Selecciona un tipo de gráfico.")
+
+    def graficar_ventas_por_menu(self):
+        import matplotlib.pyplot as plt
+
+        menus = [pedido["menu"] for pedido in self.pedidos]
+        cantidades = [pedido["cantidad"] for pedido in self.pedidos]
+
+        plt.bar(menus, cantidades, color='blue')
+        plt.title("Ventas por Menú")
+        plt.xlabel("Menús")
+        plt.ylabel("Cantidad Vendida")
+        plt.show()
+
+    def graficar_ingredientes_usados(self):
+        import matplotlib.pyplot as plt
+
+        ingredientes = [f"{ing['nombre']} - {ing['cantidad']}" for ing in self.stock]
+        cantidades = [ing["cantidad"] for ing in self.stock]
+
+        plt.pie(cantidades, labels=ingredientes, autopct="%1.1f%%")
+        plt.title("Distribución de Ingredientes Usados")
+        plt.show()
 
 if __name__ == "__main__":
     app = RestauranteApp()
