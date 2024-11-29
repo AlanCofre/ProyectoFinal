@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 from fpdf import FPDF
 import os
 from datetime import datetime
+from graficos import GeneradorGraficos
 
 class RestauranteApp(ctk.CTk):
     def __init__(self):
@@ -12,13 +13,13 @@ class RestauranteApp(ctk.CTk):
         self.title("Gestión de Restaurante")
         self.geometry("900x700")
 
-        self.stock = []  # Lista para ingredientes
-        self.menus = []  # Lista para menús
-        self.clientes = []  # Lista para clientes
-        self.pedidos = []  # Lista para pedidos
-        self.total = 0  # Total acumulado en pedidos actuales
+        self.stock = []
+        self.menus = []
+        self.clientes = []
+        self.pedidos = []
+        self.total = 0
 
-        # Crear y configurar pestañas
+        # Crear pestañas
         self.tabs = ctk.CTkTabview(self)
         self.tabs.pack(expand=True, fill="both")
 
@@ -31,9 +32,10 @@ class RestauranteApp(ctk.CTk):
         self.setup_ingreso_ingredientes()
         self.setup_menus()
         self.setup_clientes()
-        self.setup_pedido()  
-        self.setup_graficos()
+        self.setup_pedido()
 
+        # Configurar la pestaña de gráficos usando GeneradorGraficos
+        self.generador_graficos = GeneradorGraficos(self.tab_graficos)
     # ------------------- INGREDIENTES ------------------- #
     def setup_ingreso_ingredientes(self):
         frame = ctk.CTkFrame(self.tab_ingreso_ingredientes)
@@ -91,7 +93,7 @@ class RestauranteApp(ctk.CTk):
         for ing in self.stock:
             self.treeview_ingredientes.insert("", "end", values=(ing["nombre"], ing["cantidad"]))
 
-       # ------------------- MENÚS ------------------- #
+        # ------------------- MENÚS ------------------- #
     def setup_menus(self):
         frame = ctk.CTkFrame(self.tab_menus)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -105,12 +107,6 @@ class RestauranteApp(ctk.CTk):
         self.entry_descripcion_menu = ctk.CTkEntry(frame)
         self.entry_descripcion_menu.pack(pady=5)
 
-        # Entrada para el precio del menú
-        ctk.CTkLabel(frame, text="Precio del Menú").pack(pady=5)
-        self.entry_precio_menu = ctk.CTkEntry(frame)
-        self.entry_precio_menu.pack(pady=5)
-
-
         # Tabla para seleccionar ingredientes
         ctk.CTkLabel(frame, text="Seleccionar Ingredientes").pack(pady=5)
         self.treeview_ingredientes_menu = ttk.Treeview(frame, columns=("Nombre", "Cantidad"), show="headings")
@@ -123,12 +119,11 @@ class RestauranteApp(ctk.CTk):
         # Botón para agregar el menú
         ctk.CTkButton(frame, text="Crear Menú", command=self.crear_menu).pack(pady=10)
 
-        # Tabla para mostrar menús creados (agregamos la columna de precio)
+        # Tabla para mostrar menús creados
         ctk.CTkLabel(frame, text="Menús Creados").pack(pady=5)
-        self.treeview_menus = ttk.Treeview(frame, columns=("Nombre", "Descripción", "Precio"), show="headings")
+        self.treeview_menus = ttk.Treeview(frame, columns=("Nombre", "Descripción"), show="headings")
         self.treeview_menus.heading("Nombre", text="Nombre")
         self.treeview_menus.heading("Descripción", text="Descripción")
-        self.treeview_menus.heading("Precio", text="Precio")
         self.treeview_menus.pack(fill="both", expand=True, padx=10, pady=10)
 
     def actualizar_treeview_ingredientes_menu(self):
@@ -144,19 +139,9 @@ class RestauranteApp(ctk.CTk):
     def crear_menu(self):
         nombre = self.entry_nombre_menu.get().strip()
         descripcion = self.entry_descripcion_menu.get().strip()
-        precio = self.entry_precio_menu.get().strip()
 
-        if not nombre or not descripcion or not precio:
+        if not nombre or not descripcion:
             messagebox.showerror("Error", "Debe llenar todos los campos.")
-            return
-
-        # Verificar que el precio sea un número válido
-        try:
-            precio = float(precio)
-            if precio <= 0:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Error", "Precio inválido.")
             return
 
         # Obtener los ingredientes seleccionados
@@ -189,7 +174,7 @@ class RestauranteApp(ctk.CTk):
                     ing["cantidad"] -= ingrediente["cantidad"]
 
         # Crear el menú
-        self.menus.append({"nombre": nombre, "descripcion": descripcion, "precio": precio, "ingredientes": ingredientes_menu})
+        self.menus.append({"nombre": nombre, "descripcion": descripcion, "ingredientes": ingredientes_menu})
         self.actualizar_treeview_ingredientes_menu()
         self.actualizar_treeview_menus()
 
@@ -198,12 +183,26 @@ class RestauranteApp(ctk.CTk):
 
         messagebox.showinfo("Éxito", f"Menú '{nombre}' creado correctamente.")
 
+    def solicitar_cantidad_ing(self, nombre, cantidad_disponible):
+        # Ventana emergente para pedir cantidad
+        cantidad = ctk.CTkInputDialog(
+            text=f"Ingrese la cantidad de '{nombre}' (Disponible: {cantidad_disponible})",
+            title="Cantidad de Ingrediente"
+        )
+        try:
+            cantidad_ingresada = int(cantidad.get_input().strip())
+            if cantidad_ingresada <= 0:
+                raise ValueError("Cantidad no válida.")
+            return cantidad_ingresada
+        except (ValueError, TypeError):
+            messagebox.showerror("Error", "Cantidad ingresada no válida.")
+            return None
 
     def actualizar_treeview_menus(self):
         for item in self.treeview_menus.get_children():
             self.treeview_menus.delete(item)
         for menu in self.menus:
-            self.treeview_menus.insert("", "end", values=(menu["nombre"], menu["descripcion"], f"${menu['precio']:.2f}"))
+            self.treeview_menus.insert("", "end", values=(menu["nombre"], menu["descripcion"]))
 
 
     # ------------------- CLIENTES ------------------- #
@@ -367,49 +366,6 @@ class RestauranteApp(ctk.CTk):
         pdf.output(nombre_archivo)
 
         messagebox.showinfo("Éxito", f"Boleta generada: {nombre_archivo}")
-
-    # ------------------- GRÁFICOS ------------------- #
-    def setup_graficos(self):
-        frame = ctk.CTkFrame(self.tab_graficos)
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        ctk.CTkLabel(frame, text="Selecciona un tipo de gráfico").pack(pady=10)
-        self.dropdown_graficos = ctk.CTkComboBox(frame, values=["Ventas por Menú", "Ingredientes Usados"])
-        self.dropdown_graficos.pack(pady=10)
-
-        ctk.CTkButton(frame, text="Generar Gráfico", command=self.mostrar_grafico).pack(pady=10)
-
-    def mostrar_grafico(self):
-        grafico_seleccionado = self.dropdown_graficos.get()
-
-        if grafico_seleccionado == "Ventas por Menú":
-            self.graficar_ventas_por_menu()
-        elif grafico_seleccionado == "Ingredientes Usados":
-            self.graficar_ingredientes_usados()
-        else:
-            messagebox.showerror("Error", "Selecciona un tipo de gráfico.")
-
-    def graficar_ventas_por_menu(self):
-        import matplotlib.pyplot as plt
-
-        menus = [pedido["menu"] for pedido in self.pedidos]
-        cantidades = [pedido["cantidad"] for pedido in self.pedidos]
-
-        plt.bar(menus, cantidades, color='blue')
-        plt.title("Ventas por Menú")
-        plt.xlabel("Menús")
-        plt.ylabel("Cantidad Vendida")
-        plt.show()
-
-    def graficar_ingredientes_usados(self):
-        import matplotlib.pyplot as plt
-
-        ingredientes = [f"{ing['nombre']} - {ing['cantidad']}" for ing in self.stock]
-        cantidades = [ing["cantidad"] for ing in self.stock]
-
-        plt.pie(cantidades, labels=ingredientes, autopct="%1.1f%%")
-        plt.title("Distribución de Ingredientes Usados")
-        plt.show()
 
 if __name__ == "__main__":
     app = RestauranteApp()

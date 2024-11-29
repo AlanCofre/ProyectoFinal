@@ -1,59 +1,68 @@
-import matplotlib.pyplot as plt
-from database import session  # Asume que tienes una sesión activa de SQLAlchemy
-from models import Pedido, Cliente, Ingrediente  # Importa tus modelos
+import customtkinter as ctk
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import random
 
-# Función para ventas por fecha
-def graficar_ventas_por_fecha():
-    """
-    Genera un gráfico de barras con las ventas agrupadas por fecha.
-    """
-    # Consulta datos de la base
-    datos = session.query(Pedido.fecha, Pedido.total).all()
-    fechas = [d[0] for d in datos]
-    totales = [d[1] for d in datos]
+class GeneradorGraficos:
+    def __init__(self, parent):
+        """Inicializa la clase y configura los gráficos dentro del contenedor `parent`."""
+        self.parent = parent
+        self.setup_ui()
 
-    # Graficar
-    plt.figure(figsize=(10, 6))
-    plt.bar(fechas, totales, color='blue', alpha=0.7)
-    plt.xlabel("Fechas")
-    plt.ylabel("Ventas Totales")
-    plt.title("Ventas por Fecha")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
+    def setup_ui(self):
+        """Configura la interfaz para los gráficos."""
+        frame = ctk.CTkFrame(self.parent)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-# Función para distribución de menús
-def graficar_menus_mas_comprados():
-    """
-    Genera un gráfico de torta con la distribución de menús más comprados.
-    """
-    # Ejemplo: Consulta en base al modelo Pedido
-    datos = session.query(Pedido.descripcion, Pedido.cantidad).all()
-    nombres = [d[0] for d in datos]
-    cantidades = [d[1] for d in datos]
+        # Botones para generar gráficos
+        ctk.CTkButton(frame, text="Gráfico de Barras", command=self.generar_grafico_barras).pack(pady=10)
+        ctk.CTkButton(frame, text="Gráfico de Tortas", command=self.generar_grafico_tortas).pack(pady=10)
 
-    # Graficar
-    plt.figure(figsize=(8, 8))
-    plt.pie(cantidades, labels=nombres, autopct='%1.1f%%', startangle=140)
-    plt.title("Menús Más Comprados")
-    plt.axis('equal')
-    plt.show()
+        # Contenedor de gráficos
+        self.grafico_frame = ctk.CTkFrame(frame)
+        self.grafico_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-# Función para uso de ingredientes
-def graficar_uso_ingredientes():
-    """
-    Genera un gráfico de barras horizontales para visualizar el uso de ingredientes.
-    """
-    datos = session.query(Ingrediente.nombre, Ingrediente.cantidad).all()
-    nombres = [d[0] for d in datos]
-    cantidades = [d[1] for d in datos]
+    def limpiar_grafico(self):
+        """Limpia el contenido del contenedor de gráficos."""
+        for widget in self.grafico_frame.winfo_children():
+            widget.destroy()
 
-    # Graficar
-    plt.figure(figsize=(10, 6))
-    plt.barh(nombres, cantidades, color='green', alpha=0.7)
-    plt.xlabel("Cantidad Usada")
-    plt.ylabel("Ingredientes")
-    plt.title("Uso de Ingredientes")
-    plt.tight_layout()
-    plt.show()
+    def generar_grafico_barras(self):
+        """Genera un gráfico de barras con datos de prueba."""
+        self.limpiar_grafico()
 
+        # Datos de prueba
+        labels = ['Ingrediente 1', 'Ingrediente 2', 'Ingrediente 3']
+        valores = [random.randint(10, 50) for _ in labels]
+
+        # Crear el gráfico
+        fig = Figure(figsize=(6, 4), dpi=100)
+        ax = fig.add_subplot(111)
+        ax.bar(labels, valores, color='skyblue')
+        ax.set_title("Gráfico de Barras")
+        ax.set_ylabel("Cantidad")
+        ax.set_xlabel("Ingredientes")
+
+        # Mostrar el gráfico
+        canvas = FigureCanvasTkAgg(fig, master=self.grafico_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+
+    def generar_grafico_tortas(self):
+        """Genera un gráfico de tortas con datos de prueba."""
+        self.limpiar_grafico()
+
+        # Datos de prueba
+        labels = ['Ingrediente A', 'Ingrediente B', 'Ingrediente C']
+        valores = [random.randint(10, 50) for _ in labels]
+
+        # Crear el gráfico
+        fig = Figure(figsize=(6, 4), dpi=100)
+        ax = fig.add_subplot(111)
+        ax.pie(valores, labels=labels, autopct='%1.1f%%', startangle=90)
+        ax.set_title("Gráfico de Tortas")
+
+        # Mostrar el gráfico
+        canvas = FigureCanvasTkAgg(fig, master=self.grafico_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True)
